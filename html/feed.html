@@ -1,0 +1,11 @@
+{{define "content"}}
+{{range .Feed.Links}}
+    {{template "link" .}}
+    <a href="{{.Href}}">{{.Title}}</a>
+{{end}}
+
+{{range .Feed.Entries}}
+    {{$link := index .Links 0}}
+    <a href="{{$link.Href}}">{{.Title}}</a>
+{{end}}
+{{end}}
