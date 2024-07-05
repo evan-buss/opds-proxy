@@ -18,7 +18,8 @@
 
 #container > ul > li {
   display: flex;
-  justify-content: space-between;
+  justify-content: start;
+  gap: 16px;
   align-items: center;
   padding: 0.5rem 1rem;
 }

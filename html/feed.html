@@ -1,20 +1,24 @@
+{{define "title"}}{{.Title}}{{end}}
 {{define "content"}}
 <ul>
-    {{range .Feed.Links}}
-       <li><a href="{{.Href}}" rel="{{.Rel}}">{{.Title}}{{.Rel}}</a></li>  
+    {{if .Search }}
+       <li><a href="{{.Search}}">Search</a></li>  
     {{end}}
 
-    {{range .Feed.Entries}}
+    {{range .Navigation}}
+       <li><a href="{{.Href}}">{{.Label}}</a></li>  
+    {{end}}
+
+    {{range .Links}}
         <li class="link">
-            {{$title := .Title}}
-            {{range .Links}}
-                {{if .IsImage "image/thumbnail"}}
-                    <img src="/acquisition{{.Href}}" alt="{{$title}}" height="40">
-                {{else if .IsDownload}} 
-                    <a href="/acquisition{{.Href}}" download>{{$title}}</a>
-                {{else if .IsNavigation }}
-                    <a href="{{.Href}}">{{$title}}</a>
-                {{end}}
+            {{if .ImageURL}}
+                <img src="/acquisition{{.ImageURL}}" alt="{{.Title}}" height="40">
+            {{end}}
+
+            {{if .IsDownload}} 
+                <a href="/acquisition{{.Href}}" download>{{.Title}}</a>
+            {{else}}
+                <a href="{{.Href}}">{{.Title}}</a>
             {{end}}
         </li>
     {{end}}

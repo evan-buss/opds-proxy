@@ -17,22 +17,16 @@ func ParseFeed(r io.Reader) (*Feed, error) {
 	return &feed, nil
 }
 
-func (link Link) IsDownload() string {
-	if link.Rel == "http://opds-spec.org/acquisition" {
-		return link.Href
-	}
-
-	return ""
+func (link Link) IsDownload() bool {
+	return link.Rel == "http://opds-spec.org/acquisition"
 }
 
-func (link Link) IsImage(category string) string {
+func (link Link) IsImage(category string) bool {
 	if strings.HasPrefix(link.TypeLink, "image") {
-		if strings.Contains(link.Rel, category) {
-			return link.Href
-		}
+		return strings.Contains(link.Rel, category)
 	}
 
-	return ""
+	return false
 }
 
 func (link Link) IsNavigation() bool {
