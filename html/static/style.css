@@ -1,0 +1,40 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+
+  font-family: sans-serif;
+  font-size: 1.25rem;
+}
+
+#container {
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  min-width: 1200px;
+}
+
+#container > ul {
+  list-style-type: none;
+}
+
+#container > ul > li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+}
+
+#container > ul > li:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: black;
+}

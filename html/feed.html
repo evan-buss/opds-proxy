@@ -1,11 +1,22 @@
 {{define "content"}}
-{{range .Feed.Links}}
-    {{template "link" .}}
-    <a href="{{.Href}}">{{.Title}}</a>
-{{end}}
+<ul>
+    {{range .Feed.Links}}
+       <li><a href="{{.Href}}" rel="{{.Rel}}">{{.Title}}{{.Rel}}</a></li>  
+    {{end}}
 
-{{range .Feed.Entries}}
-    {{$link := index .Links 0}}
-    <a href="{{$link.Href}}">{{.Title}}</a>
-{{end}}
+    {{range .Feed.Entries}}
+        <li class="link">
+            {{$title := .Title}}
+            {{range .Links}}
+                {{if .IsImage "image/thumbnail"}}
+                    <img src="/acquisition{{.Href}}" alt="{{$title}}" height="40">
+                {{else if .IsDownload}} 
+                    <a href="/acquisition{{.Href}}" download>{{$title}}</a>
+                {{else if .IsNavigation }}
+                    <a href="{{.Href}}">{{$title}}</a>
+                {{end}}
+            {{end}}
+        </li>
+    {{end}}
+</ul>
 {{end}}
