@@ -1,0 +1,16 @@
+{{define "search-partial"}}
+
+<form method="get">
+  <input type="hidden" name="q" value="{{.Search}}" />
+  <input type="search" placeholder="Search" name="search" />
+
+  <script>
+    const searchInput = document.querySelector("input[name=search]");
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("search") && !!searchInput) {
+      searchInput.value = searchParams.get("search");
+    }
+  </script>
+</form>
+
+{{end}}

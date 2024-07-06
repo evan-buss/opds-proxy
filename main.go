@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"mime"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/evan-buss/kobo-opds-proxy/html"
@@ -13,13 +16,10 @@ import (
 )
 
 func main() {
-	router := http.NewServeMux()
-	router.HandleFunc("GET /{$}", handleHome())
-	router.HandleFunc("GET /feed", handleFeed())
-	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
+	server := NewServer()
 
-	slog.Info("Starting server", slog.String("port", "8080"))
-	log.Fatal(http.ListenAndServe(":8080", router))
+	slog.Info("Starting server", slog.String("port", server.addr))
+	log.Fatal(http.ListenAndServe(server.addr, server.router))
 }
 
 func handleHome() http.HandlerFunc {
@@ -35,7 +35,7 @@ func handleHome() http.HandlerFunc {
 				URL:   "https://m.gutenberg.org/ebooks.opds/",
 			},
 		}
-		html.Home(w, feeds)
+		html.Home(w, feeds, partial(r))
 	}
 }
 
@@ -47,7 +47,18 @@ func handleFeed() http.HandlerFunc {
 			return
 		}
 
-		slog.Info("Fetching feed", slog.String("path", queryURL))
+		parsedUrl, err := url.PathUnescape(queryURL)
+		if err != nil {
+			handleError(r, w, "Failed to parse URL", err)
+			return
+		}
+		queryURL = parsedUrl
+
+		searchTerm := r.URL.Query().Get("search")
+		if searchTerm != "" {
+			fmt.Println("Search term", searchTerm)
+			queryURL = replaceSearchPlaceHolder(queryURL, searchTerm)
+		}
 
 		resp, err := fetchFromUrl(queryURL)
 		if err != nil {
@@ -65,13 +76,17 @@ func handleFeed() http.HandlerFunc {
 
 		if mimeType == "application/atom+xml" {
 			feed, err := opds.ParseFeed(resp.Body)
-
 			if err != nil {
 				handleError(r, w, "Failed to parse feed", err)
 				return
 			}
 
-			err = html.Feed(w, html.FeedParams{URL: queryURL, Feed: feed}, "")
+			feedParams := html.FeedParams{
+				URL:  queryURL,
+				Feed: feed,
+			}
+
+			err = html.Feed(w, feedParams, partial(r))
 			if err != nil {
 				handleError(r, w, "Failed to render feed", err)
 				return
@@ -104,4 +119,12 @@ func fetchFromUrl(url string) (*http.Response, error) {
 func handleError(r *http.Request, w http.ResponseWriter, message string, err error) {
 	slog.Error(message, slog.String("path", r.URL.RawPath), slog.Any("error", err))
 	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+}
+
+func replaceSearchPlaceHolder(url string, searchTerm string) string {
+	return strings.Replace(url, "{searchTerms}", searchTerm, 1)
+}
+
+func partial(req *http.Request) string {
+	return req.URL.Query().Get("partial")
 }

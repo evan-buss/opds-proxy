@@ -3,7 +3,11 @@
 <nav class="navigation">
   {{if .Search }}
   <div class="search">
-    <a href="{{.Search}}" tabindex="-1">
+    <a
+      href="{{.Search}}"
+      tabindex="-1"
+      hx-get="?q={{.Search}}&partial=search.html"
+    >
       <svg
         width="30"
         height="30"
@@ -50,4 +54,5 @@
   </li>
   {{end}}
 </ul>
+
 {{end}}
