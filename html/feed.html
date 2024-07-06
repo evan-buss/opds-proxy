@@ -25,8 +25,9 @@
   {{end}}
 
   <div class="nav-controls">
+    <a tabindex="-1" href="/">Home</a>
     {{range .Navigation}}
-    <a tabindex="-1" href="{{.Href}}">{{.Label}}</a>
+    <a tabindex="-1" href="?q={{.Href}}">{{.Label}}</a>
     {{end}}
   </div>
 </nav>
@@ -35,14 +36,14 @@
   {{range .Links}}
   <li class="link">
     {{if .ImageURL}}
-    <img src="/acquisition{{.ImageURL}}" alt="{{.Title}}" height="40" />
+    <img src="?q={{.ImageURL}}" alt="{{.Title}}" height="40" />
     {{end}}
 
     <div class="info">
       {{if .IsDownload}}
-      <a href="/acquisition{{.Href}}" download>{{.Title}}</a>
+      <a href="?q={{.Href}}" download>{{.Title}}</a>
       {{else}}
-      <a href="{{.Href}}">{{.Title}}</a>
+      <a href="?q={{.Href}}">{{.Title}}</a>
       {{end}}
       <p>{{.Author}}</p>
     </div>

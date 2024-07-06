@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"mime"
 	"net/http"
 	"time"
 
@@ -11,48 +12,70 @@ import (
 	"github.com/evan-buss/kobo-opds-proxy/opds"
 )
 
-const baseUrl = "http://calibre.terminus"
-
 func main() {
 	router := http.NewServeMux()
-	router.HandleFunc("GET /", handleFeed())
-	router.HandleFunc("GET /acquisition/{path...}", handleAcquisition())
+	router.HandleFunc("GET /{$}", handleHome())
+	router.HandleFunc("GET /feed", handleFeed())
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
 	slog.Info("Starting server", slog.String("port", "8080"))
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
-func handleFeed() http.HandlerFunc {
+func handleHome() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		opdsUrl := baseUrl + r.URL.RequestURI()
-
-		slog.Info("Fetching feed", slog.String("path", opdsUrl))
-
-		feed, err := fetchFeed(opdsUrl)
-		if err != nil {
-			slog.Error("Failed to parse feed", slog.String("path", r.URL.RawPath), slog.Any("error", err))
-			http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-			return
+		slog.Info("Rendering home page")
+		feeds := []html.FeedInfo{
+			{
+				Title: "Evan's Library",
+				URL:   "http://calibre.terminus/opds",
+			},
+			{
+				Title: "Project Gutenberg",
+				URL:   "https://m.gutenberg.org/ebooks.opds/",
+			},
 		}
-
-		err = html.Feed(w, html.FeedParams{Feed: feed}, "")
-		if err != nil {
-			slog.Error("Failed to render feed", slog.String("path", r.URL.RawPath), slog.Any("error", err))
-			http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-			return
-		}
+		html.Home(w, feeds)
 	}
 }
 
-func handleAcquisition() http.HandlerFunc {
+func handleFeed() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		opdsUrl := baseUrl + "/" + r.PathValue("path")
-		resp, err := fetchFromUrl(opdsUrl)
-		if err != nil {
-			slog.Error("Failed to fetch acquisition", slog.String("path", opdsUrl), slog.Any("error", err))
-			http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+		queryURL := r.URL.Query().Get("q")
+		if queryURL == "" {
+			http.Error(w, "No feed specified", http.StatusBadRequest)
 			return
+		}
+
+		slog.Info("Fetching feed", slog.String("path", queryURL))
+
+		resp, err := fetchFromUrl(queryURL)
+		if err != nil {
+			handleError(r, w, "Failed to fetch feed", err)
+			return
+		}
+
+		defer resp.Body.Close()
+
+		contentType := resp.Header.Get("Content-Type")
+		mimeType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			handleError(r, w, "Failed to parse content type", err)
+		}
+
+		if mimeType == "application/atom+xml" {
+			feed, err := opds.ParseFeed(resp.Body)
+
+			if err != nil {
+				handleError(r, w, "Failed to parse feed", err)
+				return
+			}
+
+			err = html.Feed(w, html.FeedParams{URL: queryURL, Feed: feed}, "")
+			if err != nil {
+				handleError(r, w, "Failed to render feed", err)
+				return
+			}
 		}
 
 		for k, v := range resp.Header {
@@ -60,6 +83,7 @@ func handleAcquisition() http.HandlerFunc {
 		}
 
 		io.Copy(w, resp.Body)
+
 	}
 }
 
@@ -77,12 +101,7 @@ func fetchFromUrl(url string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func fetchFeed(url string) (*opds.Feed, error) {
-	r, err := fetchFromUrl(url)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Body.Close()
-
-	return opds.ParseFeed(r.Body)
+func handleError(r *http.Request, w http.ResponseWriter, message string, err error) {
+	slog.Error(message, slog.String("path", r.URL.RawPath), slog.Any("error", err))
+	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
 }

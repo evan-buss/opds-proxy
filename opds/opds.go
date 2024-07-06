@@ -22,7 +22,7 @@ func (link Link) IsDownload() bool {
 }
 
 func (link Link) IsImage(category string) bool {
-	if strings.HasPrefix(link.TypeLink, "image") {
+	if strings.HasPrefix(link.TypeLink, "image") && !strings.HasPrefix(link.Href, "data") {
 		return strings.Contains(link.Rel, category)
 	}
 
@@ -30,5 +30,5 @@ func (link Link) IsImage(category string) bool {
 }
 
 func (link Link) IsNavigation() bool {
-	return link.TypeLink == "application/atom+xml;type=feed;profile=opds-catalog"
+	return link.TypeLink == "application/atom+xml;type=feed;profile=opds-catalog" || link.Rel == "subsection"
 }

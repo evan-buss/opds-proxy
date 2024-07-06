@@ -1,0 +1,9 @@
+{{define "content"}}
+<ul>
+  {{range .}}
+  <li class="link">
+    <a href="/feed?q={{.URL}}">{{.Title}}</a>
+  </li>
+  {{end}}
+</ul>
+{{end}}

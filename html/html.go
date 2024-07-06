@@ -2,8 +2,11 @@ package html
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io"
+	"log"
+	"net/url"
 	"strings"
 
 	"github.com/evan-buss/kobo-opds-proxy/opds"
@@ -13,6 +16,7 @@ import (
 var files embed.FS
 
 var (
+	home = parse("home.html")
 	feed = parse("feed.html")
 )
 
@@ -21,6 +25,7 @@ func parse(file string) *template.Template {
 }
 
 type FeedParams struct {
+	URL  string
 	Feed *opds.Feed
 }
 
@@ -44,7 +49,7 @@ type LinkViewModel struct {
 	IsDownload bool
 }
 
-func convertFeed(feed *opds.Feed) FeedViewModel {
+func convertFeed(url string, feed *opds.Feed) FeedViewModel {
 	vm := FeedViewModel{
 		Title:      feed.Title,
 		Search:     "",
@@ -54,25 +59,25 @@ func convertFeed(feed *opds.Feed) FeedViewModel {
 
 	for _, link := range feed.Links {
 		if link.Rel == "search" {
-			vm.Search = link.Href
+			vm.Search = resolveHref(url, link.Href)
 		}
 
 		if link.TypeLink == "application/atom+xml;type=feed;profile=opds-catalog" {
 			vm.Navigation = append(vm.Navigation, NavigationViewModel{
-				Href:  link.Href,
+				Href:  resolveHref(url, link.Href),
 				Label: strings.ToUpper(link.Rel[:1]) + link.Rel[1:],
 			})
 		}
 	}
 
 	for _, entry := range feed.Entries {
-		vm.Links = append(vm.Links, constructLink(entry))
+		vm.Links = append(vm.Links, constructLink(url, entry))
 	}
 
 	return vm
 }
 
-func constructLink(entry opds.Entry) LinkViewModel {
+func constructLink(url string, entry opds.Entry) LinkViewModel {
 	vm := LinkViewModel{
 		Title:   entry.Title,
 		Content: entry.Content.Content,
@@ -87,13 +92,12 @@ func constructLink(entry opds.Entry) LinkViewModel {
 	for _, link := range entry.Links {
 		vm.IsDownload = link.IsDownload()
 		if link.IsNavigation() || link.IsDownload() {
-			vm.Href = link.Href
-
+			vm.Href = resolveHref(url, link.Href)
 		}
 
 		// Prefer the first "thumbnail" image we find
 		if vm.ImageURL == "" && link.IsImage("thumbnail") {
-			vm.ImageURL = link.Href
+			vm.ImageURL = resolveHref(url, link.Href)
 		}
 	}
 
@@ -101,7 +105,7 @@ func constructLink(entry opds.Entry) LinkViewModel {
 	if vm.ImageURL == "" {
 		for _, link := range entry.Links {
 			if link.IsImage("") {
-				vm.ImageURL = link.Href
+				vm.ImageURL = resolveHref(url, link.Href)
 				break
 			}
 		}
@@ -109,15 +113,38 @@ func constructLink(entry opds.Entry) LinkViewModel {
 
 	return vm
 }
+func resolveHref(feedUrl string, relativePath string) string {
+	baseUrl, err := url.Parse(feedUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	relativeUrl, err := url.Parse(relativePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resolved := baseUrl.ResolveReference(relativeUrl).String()
+	fmt.Println("Resolved URL: ", resolved)
+	return resolved
+}
 
 func Feed(w io.Writer, p FeedParams, partial string) error {
 	if partial == "" {
 		partial = "layout.html"
 	}
 
-	vm := convertFeed(p.Feed)
+	vm := convertFeed(p.URL, p.Feed)
 
 	return feed.ExecuteTemplate(w, partial, vm)
+}
+
+type FeedInfo struct {
+	Title string
+	URL   string
+}
+
+func Home(w io.Writer, p []FeedInfo) error {
+	return home.ExecuteTemplate(w, "layout.html", p)
 }
 
 func StaticFiles() embed.FS {
