@@ -1,29 +1,52 @@
-{{define "title"}}{{.Title}}{{end}}
-{{define "content"}}
-<ul>
-    {{if .Search }}
-       <li><a href="{{.Search}}">Search</a></li>  
-    {{end}}
+{{define "title"}}{{.Title}}{{end}} {{define "content"}}
 
+<nav class="navigation">
+  {{if .Search }}
+  <div class="search">
+    <a href="{{.Search}}" tabindex="-1">
+      <svg
+        width="30"
+        height="30"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="size-6"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+        />
+      </svg>
+    </a>
+  </div>
+  {{end}}
+
+  <div class="nav-controls">
     {{range .Navigation}}
-       <li><a href="{{.Href}}">{{.Label}}</a></li>  
+    <a tabindex="-1" href="{{.Href}}">{{.Label}}</a>
+    {{end}}
+  </div>
+</nav>
+
+<ul>
+  {{range .Links}}
+  <li class="link">
+    {{if .ImageURL}}
+    <img src="/acquisition{{.ImageURL}}" alt="{{.Title}}" height="40" />
     {{end}}
 
-    {{range .Links}}
-        <li class="link">
-            {{if .ImageURL}}
-                <img src="/acquisition{{.ImageURL}}" alt="{{.Title}}" height="40">
-            {{end}}
-
-            <div class="info">
-                {{if .IsDownload}} 
-                    <a href="/acquisition{{.Href}}" download>{{.Title}}</a>
-                {{else}}
-                    <a href="{{.Href}}">{{.Title}}</a>
-                {{end}}
-                <p>{{.Author}}</p>
-            </div>
-        </li>
-    {{end}}
+    <div class="info">
+      {{if .IsDownload}}
+      <a href="/acquisition{{.Href}}" download>{{.Title}}</a>
+      {{else}}
+      <a href="{{.Href}}">{{.Title}}</a>
+      {{end}}
+      <p>{{.Author}}</p>
+    </div>
+  </li>
+  {{end}}
 </ul>
 {{end}}

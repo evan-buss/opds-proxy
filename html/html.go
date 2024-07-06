@@ -82,11 +82,13 @@ func constructLink(entry opds.Entry) LinkViewModel {
 	for _, author := range entry.Author {
 		authors = append(authors, author.Name)
 	}
-	vm.Author = strings.Join(authors, ", ")
+	vm.Author = strings.Join(authors, " & ")
 
 	for _, link := range entry.Links {
+		vm.IsDownload = link.IsDownload()
 		if link.IsNavigation() || link.IsDownload() {
 			vm.Href = link.Href
+
 		}
 
 		// Prefer the first "thumbnail" image we find

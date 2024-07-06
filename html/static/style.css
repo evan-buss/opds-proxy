@@ -8,20 +8,13 @@
   font-size: 1.25rem;
 }
 
-body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
-
 #container {
-  padding: 2rem;
-  border: 1px solid rgba(0, 0, 0, 0.5);
+  padding: 1rem;
   width: 100%;
 }
 
 #container > ul {
+  margin-top: 75px;
   list-style-type: none;
 }
 
@@ -45,17 +38,54 @@ body {
   font-size: 1rem;
 }
 
-#container > ul > li a {
+a {
   display: inline-block;
   text-decoration: none;
   color: black;
-  vertical-align: top;
 }
 
-#container > ul > li a:active {
-  background-color: black;
+#container > ul > li a {
+  vertical-align: top;
 }
 
 #container > ul > li:not(:last-child) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.navigation {
+  background-color: white;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  display: block;
+
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.search {
+  width: 100px;
+  display: inline-block;
+}
+
+.search:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.search > a {
+  padding-top: 1rem;
+  padding-left: 1rem;
+  display: block;
+  margin: auto;
+}
+
+.nav-controls {
+  float: right;
+}
+
+.nav-controls > a {
+  padding: 1rem;
 }
