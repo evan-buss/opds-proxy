@@ -37,6 +37,7 @@ type NavigationViewModel struct {
 
 type LinkViewModel struct {
 	Title      string
+	Author     string
 	ImageURL   string
 	Content    string
 	Href       string
@@ -76,6 +77,12 @@ func constructLink(entry opds.Entry) LinkViewModel {
 		Title:   entry.Title,
 		Content: entry.Content.Content,
 	}
+
+	authors := make([]string, 0)
+	for _, author := range entry.Author {
+		authors = append(authors, author.Name)
+	}
+	vm.Author = strings.Join(authors, ", ")
 
 	for _, link := range entry.Links {
 		if link.IsNavigation() || link.IsDownload() {

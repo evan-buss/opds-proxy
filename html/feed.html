@@ -15,11 +15,14 @@
                 <img src="/acquisition{{.ImageURL}}" alt="{{.Title}}" height="40">
             {{end}}
 
-            {{if .IsDownload}} 
-                <a href="/acquisition{{.Href}}" download>{{.Title}}</a>
-            {{else}}
-                <a href="{{.Href}}">{{.Title}}</a>
-            {{end}}
+            <div class="info">
+                {{if .IsDownload}} 
+                    <a href="/acquisition{{.Href}}" download>{{.Title}}</a>
+                {{else}}
+                    <a href="{{.Href}}">{{.Title}}</a>
+                {{end}}
+                <p>{{.Author}}</p>
+            </div>
         </li>
     {{end}}
 </ul>
