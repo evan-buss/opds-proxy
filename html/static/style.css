@@ -18,20 +18,26 @@
   list-style-type: none;
 }
 
+@media (max-width: 500px) {
+  #container > ul {
+    margin-top: 125px;
+  }
+}
+
 #container > ul > li {
-  padding: 1rem 1rem;
-  display: block;
+  padding: 1rem;
+  white-space: nowrap;
 }
 
 #container > ul > li > img {
   display: inline-block;
   height: 75px;
-  object-fit: cover;
   margin-right: 1rem;
 }
 #container > ul > li > .info {
   display: inline-block;
   vertical-align: top;
+  white-space: normal;
 }
 
 .info > p {
@@ -87,5 +93,9 @@ a {
 }
 
 .nav-controls > a {
-  padding: 1rem;
+  padding: 1rem 0.5rem;
+}
+
+.nav-controls:last-child {
+  padding-right: 1rem;
 }
