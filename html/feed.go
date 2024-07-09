@@ -1,7 +1,6 @@
 package html
 
 import (
-	"fmt"
 	"log"
 	"net/url"
 	"strings"
@@ -103,7 +102,5 @@ func resolveHref(feedUrl string, relativePath string) string {
 		log.Fatal(err)
 	}
 
-	resolved := baseUrl.ResolveReference(relativeUrl).String()
-	fmt.Println("Resolved URL: ", resolved)
-	return resolved
+	return baseUrl.ResolveReference(relativeUrl).String()
 }
