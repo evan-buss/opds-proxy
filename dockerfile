@@ -24,12 +24,12 @@ RUN go mod verify
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o opds-proxy
 
 FROM gcr.io/distroless/static
 
 COPY --from=base /usr/local/bin/kepubify /usr/local/bin/kepubify
 COPY --from=base /usr/local/bin/kindlegen /usr/local/bin/kindlegen
-COPY --from=base /src/kobo-opds-proxy/app/kobo-opds-proxy .
+COPY --from=base /src/kobo-opds-proxy/app/opds-proxy .
 
-CMD ["./kobo-opds-proxy"]
+CMD ["./opds-proxy"]
