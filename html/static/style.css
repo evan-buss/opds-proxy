@@ -29,18 +29,19 @@
   white-space: nowrap;
 }
 
-#container > ul > li > img {
+#container > ul > li > a > img {
   display: inline-block;
   height: 75px;
   margin-right: 1rem;
 }
-#container > ul > li > .info {
+#container > ul > li > a > .info {
   display: inline-block;
   vertical-align: top;
   white-space: normal;
+  max-width: calc(100% - 3rem - 75px);
 }
 
-.info > p {
+.info > p:not(:first-child) {
   font-size: 1rem;
 }
 
@@ -51,7 +52,7 @@ a {
 }
 
 #container > ul > li a {
-  vertical-align: top;
+  width: 100%;
 }
 
 #container > ul > li:not(:last-child) {
@@ -94,6 +95,7 @@ a {
 
 .nav-controls > a {
   padding: 1rem 0.5rem;
+  font-size: 1rem;
 }
 
 .nav-controls:last-child {

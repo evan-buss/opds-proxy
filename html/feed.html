@@ -39,18 +39,15 @@
 <ul>
   {{range .Links}}
   <li class="link">
-    {{if .ImageURL}}
-    <img src="?q={{.ImageURL}}" alt="{{.Title}}" height="40" />
-    {{end}}
-
-    <div class="info">
-      {{if .IsDownload}}
-      <a href="?q={{.Href}}" download>{{.Title}}</a>
-      {{else}}
-      <a href="?q={{.Href}}">{{.Title}}</a>
+    <a href="?q={{.Href}}">
+      {{if .ImageURL}}
+      <img src="?q={{.ImageURL}}" alt="{{.Title}}" height="40" />
       {{end}}
-      <p>{{.Author}}</p>
-    </div>
+      <div class="info">
+        <p>{{.Title}}</p>
+        <p>{{.Author}}</p>
+      </div>
+    </a>
   </li>
   {{end}}
 </ul>
