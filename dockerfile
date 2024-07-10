@@ -14,7 +14,7 @@ RUN wget https://web.archive.org/web/20150803131026if_/https://kindlegen.s3.amaz
     cp kindlegen/kindlegen /usr/local/bin/kindlegen && \
     chmod +x /usr/local/bin/kindlegen
 
-WORKDIR /src/kobo-opds-proxy/app/
+WORKDIR /src/opds-proxy/app/
 
 COPY go.mod .
 COPY go.sum .
@@ -30,6 +30,6 @@ FROM gcr.io/distroless/static
 
 COPY --from=base /usr/local/bin/kepubify /usr/local/bin/kepubify
 COPY --from=base /usr/local/bin/kindlegen /usr/local/bin/kindlegen
-COPY --from=base /src/kobo-opds-proxy/app/opds-proxy .
+COPY --from=base /src/opds-proxy/app/opds-proxy .
 
 CMD ["./opds-proxy"]

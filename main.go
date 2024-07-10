@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/evan-buss/kobo-opds-proxy/convert"
-	"github.com/evan-buss/kobo-opds-proxy/html"
-	"github.com/evan-buss/kobo-opds-proxy/opds"
+	"github.com/evan-buss/opds-proxy/convert"
+	"github.com/evan-buss/opds-proxy/html"
+	"github.com/evan-buss/opds-proxy/opds"
 )
 
 func main() {

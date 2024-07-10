@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/evan-buss/kobo-opds-proxy/opds"
+	"github.com/evan-buss/opds-proxy/opds"
 )
 
 type FeedViewModel struct {

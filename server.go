@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/evan-buss/kobo-opds-proxy/html"
+	"github.com/evan-buss/opds-proxy/html"
 )
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
@@ -20,8 +19,6 @@ func NewServer() *Server {
 	if os.Getenv("PORT") == "" {
 		port = "8080"
 	}
-
-	fmt.Println(os.Getenv("PATH"))
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /{$}", handleHome())
