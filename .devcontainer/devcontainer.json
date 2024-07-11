@@ -10,7 +10,8 @@
 			"installDockerBuildx": true,
 			"version": "latest",
 			"dockerDashComposeVersion": "latest"
-		}
+		},
+		"ghcr.io/georgofenbeck/features/lazygit-linuxbinary:1": {}
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],

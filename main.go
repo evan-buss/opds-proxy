@@ -113,6 +113,9 @@ func handleFeed(dir string) http.HandlerFunc {
 
 			kepubFile := filepath.Join(dir, strings.Replace(parseFileName(resp), ".epub", ".kepub.epub", 1))
 			kepubConverter.Convert(epubFile, kepubFile)
+			if err != nil {
+				handleError(r, w, "Failed to convert to kepub", err)
+			}
 
 			outFile, _ := os.Open(kepubFile)
 			defer outFile.Close()
@@ -120,7 +123,7 @@ func handleFeed(dir string) http.HandlerFunc {
 			outInfo, _ := outFile.Stat()
 
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", outInfo.Size()))
-			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": strings.Replace(parseFileName(resp), ".epub", ".kepub.epub", 1)}))
+			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filepath.Base(kepubFile)}))
 			w.Header().Set("Content-Type", convert.EPUB_MIME)
 
 			io.Copy(w, outFile)
@@ -136,7 +139,11 @@ func handleFeed(dir string) http.HandlerFunc {
 			downloadFile(epubFile, resp)
 
 			mobiFile := filepath.Join(dir, strings.Replace(parseFileName(resp), ".epub", ".mobi", 1))
-			kepubConverter.Convert(epubFile, mobiFile)
+			err := mobiConverter.Convert(epubFile, mobiFile)
+			if err != nil {
+				handleError(r, w, "Failed to convert to mobi", err)
+				return
+			}
 
 			outFile, _ := os.Open(mobiFile)
 			defer outFile.Close()
@@ -144,7 +151,7 @@ func handleFeed(dir string) http.HandlerFunc {
 			outInfo, _ := outFile.Stat()
 
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", outInfo.Size()))
-			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": strings.Replace(parseFileName(resp), ".epub", ".kepub.epub", 1)}))
+			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filepath.Base(mobiFile)}))
 			w.Header().Set("Content-Type", convert.MOBI_MIME)
 
 			io.Copy(w, outFile)
