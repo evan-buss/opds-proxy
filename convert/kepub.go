@@ -1,29 +1,40 @@
 package convert
 
 import (
+	"fmt"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 )
 
 type KepubConverter struct {
-	mutex sync.Mutex
+	mutex         sync.Mutex
+	available     bool
+	availableOnce sync.Once
 }
 
 func (kc *KepubConverter) Available() bool {
-	path, err := exec.LookPath("kepubify")
-	if err != nil {
-		return false
-	}
-	return path != ""
+	kc.availableOnce.Do(func() {
+		fmt.Println("TEST")
+		path, err := exec.LookPath("kepubify")
+		kc.available = err == nil && path != ""
+	})
+
+	return kc.available
 }
 
-func (kc *KepubConverter) Convert(input string, output string) error {
+func (kc *KepubConverter) Convert(input string) (string, error) {
 	kc.mutex.Lock()
 	defer kc.mutex.Unlock()
-	cmd := exec.Command("kepubify", "-v", "-u", "-o", output, input)
+
+	dir := filepath.Dir(input)
+	kepubFile := filepath.Join(dir, strings.Replace(filepath.Base(input), ".epub", ".kepub.epub", 1))
+
+	cmd := exec.Command("kepubify", "-v", "-u", "-o", kepubFile, input)
 	if err := cmd.Run(); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return kepubFile, nil
 }

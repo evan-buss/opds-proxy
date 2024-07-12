@@ -18,12 +18,22 @@ import (
 	"github.com/evan-buss/opds-proxy/opds"
 )
 
-type Middleware func(http.HandlerFunc) http.HandlerFunc
-
 type Server struct {
 	addr   string
 	router *http.ServeMux
 }
+
+const (
+	MOBI_MIME = "application/x-mobipocket-ebook"
+	EPUB_MIME = "application/epub+zip"
+	ATOM_MIME = "application/atom+xml"
+)
+
+var (
+	_ = mime.AddExtensionType(".epub", EPUB_MIME)
+	_ = mime.AddExtensionType(".kepub.epub", EPUB_MIME)
+	_ = mime.AddExtensionType(".mobi", MOBI_MIME)
+)
 
 func NewServer(config *config) *Server {
 	router := http.NewServeMux()
@@ -56,7 +66,7 @@ func handleHome(feeds []feedConfig) http.HandlerFunc {
 	}
 }
 
-func handleFeed(dir string) http.HandlerFunc {
+func handleFeed(outputDir string) http.HandlerFunc {
 	kepubConverter := &convert.KepubConverter{}
 	mobiConverter := &convert.MobiConverter{}
 
@@ -93,7 +103,7 @@ func handleFeed(dir string) http.HandlerFunc {
 			handleError(r, w, "Failed to parse content type", err)
 		}
 
-		if mimeType == "application/atom+xml" {
+		if mimeType == ATOM_MIME {
 			feed, err := opds.ParseFeed(resp.Body)
 			if err != nil {
 				handleError(r, w, "Failed to parse feed", err)
@@ -105,82 +115,41 @@ func handleFeed(dir string) http.HandlerFunc {
 				Feed: feed,
 			}
 
-			err = html.Feed(w, feedParams, partial(r))
-			if err != nil {
+			if err = html.Feed(w, feedParams, partial(r)); err != nil {
 				handleError(r, w, "Failed to render feed", err)
 				return
 			}
 		}
 
-		if mimeType != convert.EPUB_MIME {
-			for k, v := range resp.Header {
-				w.Header()[k] = v
-			}
+		var converter convert.Converter
+		if strings.Contains(r.UserAgent(), "Kobo") && kepubConverter.Available() {
+			converter = kepubConverter
+		} else if strings.Contains(r.UserAgent(), "Kindle") && mobiConverter.Available() {
+			converter = mobiConverter
+		}
 
-			io.Copy(w, resp.Body)
+		if mimeType != EPUB_MIME || converter == nil {
+			forwardResponse(w, resp)
 			return
 		}
 
-		if strings.Contains(r.Header.Get("User-Agent"), "Kobo") && kepubConverter.Available() {
-			epubFile := filepath.Join(dir, parseFileName(resp))
-			downloadFile(epubFile, resp)
-
-			kepubFile := filepath.Join(dir, strings.Replace(parseFileName(resp), ".epub", ".kepub.epub", 1))
-			kepubConverter.Convert(epubFile, kepubFile)
-			if err != nil {
-				handleError(r, w, "Failed to convert to kepub", err)
-			}
-
-			outFile, _ := os.Open(kepubFile)
-			defer outFile.Close()
-
-			outInfo, _ := outFile.Stat()
-
-			w.Header().Set("Content-Length", fmt.Sprintf("%d", outInfo.Size()))
-			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filepath.Base(kepubFile)}))
-			w.Header().Set("Content-Type", convert.EPUB_MIME)
-
-			io.Copy(w, outFile)
-
-			os.Remove(epubFile)
-			os.Remove(kepubFile)
-
-			return
+		filename, err := parseFileName(resp)
+		if err != nil {
+			handleError(r, w, "Failed to parse file name", err)
 		}
 
-		if strings.Contains(r.Header.Get("User-Agent"), "Kindle") && mobiConverter.Available() {
-			epubFile := filepath.Join(dir, parseFileName(resp))
-			downloadFile(epubFile, resp)
+		epubFile := filepath.Join(outputDir, filename)
+		downloadFile(epubFile, resp)
+		defer os.Remove(epubFile)
 
-			mobiFile := filepath.Join(dir, strings.Replace(parseFileName(resp), ".epub", ".mobi", 1))
-			err := mobiConverter.Convert(epubFile, mobiFile)
-			if err != nil {
-				handleError(r, w, "Failed to convert to mobi", err)
-				return
-			}
-
-			outFile, _ := os.Open(mobiFile)
-			defer outFile.Close()
-
-			outInfo, _ := outFile.Stat()
-
-			w.Header().Set("Content-Length", fmt.Sprintf("%d", outInfo.Size()))
-			w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filepath.Base(mobiFile)}))
-			w.Header().Set("Content-Type", convert.MOBI_MIME)
-
-			io.Copy(w, outFile)
-
-			os.Remove(epubFile)
-			os.Remove(mobiFile)
-
-			return
+		outputFile, err := converter.Convert(epubFile)
+		if err != nil {
+			handleError(r, w, "Failed to convert epub", err)
 		}
 
-		for k, v := range resp.Header {
-			w.Header()[k] = v
+		if err = sendConvertedFile(w, outputFile); err != nil {
+			handleError(r, w, "Failed to send converted file", err)
 		}
-
-		io.Copy(w, resp.Body)
 	}
 }
 
@@ -211,25 +180,64 @@ func partial(req *http.Request) string {
 	return req.URL.Query().Get("partial")
 }
 
-func downloadFile(path string, resp *http.Response) {
+func downloadFile(path string, resp *http.Response) error {
 	file, err := os.Create(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer file.Close()
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }
 
-func parseFileName(resp *http.Response) string {
+func parseFileName(resp *http.Response) (string, error) {
 	contentDisposition := resp.Header.Get("Content-Disposition")
 	_, params, err := mime.ParseMediaType(contentDisposition)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
-	return params["filename"]
+	return params["filename"], nil
+}
+
+func forwardResponse(w http.ResponseWriter, resp *http.Response) {
+	for k, v := range resp.Header {
+		w.Header()[k] = v
+	}
+
+	io.Copy(w, resp.Body)
+}
+
+func sendConvertedFile(w http.ResponseWriter, filePath string) error {
+	defer os.Remove(filePath)
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", info.Size()))
+	w.Header().Set("Content-Disposition",
+		mime.FormatMediaType(
+			"attachment",
+			map[string]string{"filename": filepath.Base(filePath)},
+		),
+	)
+	w.Header().Set("Content-Type", mime.TypeByExtension(filepath.Ext(filePath)))
+
+	_, err = io.Copy(w, file)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
