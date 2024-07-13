@@ -1,28 +1,23 @@
+{{define "title"}}Feed Log In{{end}}
 {{ define "content" }}
-<main>
-    <h1>{{index (urlParse .ReturnURL) "query" | trimPrefix "q=" }}</h1>
-    <p>Log in to access this feed</p>
-    <div id="content">
-        <form method="post">
-            <input type="text" name="username" placeholder="Username" />
-            <input type="password" name="password" placeholder="Password" />
-            <button type="submit">Log In</button>
-        </form>
-    </div>
-</main>
+<h1>{{urlParse .ReturnURL | getKey "query" | trimPrefix "q=" | urlParse | getKey "host" }}</h1>
+<p>Log in to access this feed.</p>
+<div id="content">
+    <form method="post">
+        <input type="text" name="username" placeholder="Username" />
+        <input type="password" name="password" placeholder="Password" />
+        <button type="submit">Log In</button>
+    </form>
+</div>
 
 <style>
-    main {
-        margin-top: 2rem;
+    h1,
+    p {
         text-align: center;
     }
 
     h1 {
-        font-size: 1.25rem;
-    }
-
-    form {
-        margin: 0 auto;
+        font-size: 1.5rem;
     }
 
     input {
@@ -35,7 +30,6 @@
     }
 
     button {
-        font-style: normal;
         padding: 0.8rem 1rem;
         margin: 1rem auto;
         display: block;
@@ -43,6 +37,7 @@
         color: white;
         border: none;
         border-radius: 2px;
+        width: 268px;
     }
 </style>
 {{ end }}

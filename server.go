@@ -95,7 +95,6 @@ func handleFeed(outputDir string) http.HandlerFunc {
 
 		searchTerm := r.URL.Query().Get("search")
 		if searchTerm != "" {
-			fmt.Println("Search term", searchTerm)
 			queryURL = replaceSearchPlaceHolder(queryURL, searchTerm)
 		}
 
@@ -213,6 +212,7 @@ func handleAuth() http.HandlerFunc {
 
 			http.SetCookie(w, cookie)
 			http.Redirect(w, r, returnUrl, http.StatusFound)
+			return
 		}
 
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

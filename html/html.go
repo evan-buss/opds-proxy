@@ -23,6 +23,14 @@ func parse(file ...string) *template.Template {
 	return template.Must(
 		template.New("layout.html").
 			Funcs(sprig.FuncMap()).
+			Funcs(template.FuncMap{
+				"getKey": func(key string, d map[string]interface{}) interface{} {
+					if val, ok := d[key]; ok {
+						return val
+					}
+					return ""
+				}},
+			).
 			ParseFS(files, file...),
 	)
 }

@@ -1,7 +1,6 @@
 package convert
 
 import (
-	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -16,7 +15,6 @@ type KepubConverter struct {
 
 func (kc *KepubConverter) Available() bool {
 	kc.availableOnce.Do(func() {
-		fmt.Println("TEST")
 		path, err := exec.LookPath("kepubify")
 		kc.available = err == nil && path != ""
 	})
