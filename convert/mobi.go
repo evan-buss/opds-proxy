@@ -2,7 +2,7 @@ package convert
 
 import (
 	"bytes"
-	"fmt"
+	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -46,13 +46,21 @@ func (mc *MobiConverter) Convert(input string) (string, error) {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
+		isError := true
 		if exiterr, ok := err.(*exec.ExitError); ok {
-			if exiterr.ExitCode() != 1 {
-				fmt.Println(fmt.Sprint(err) + ": " + out.String() + ":" + stderr.String())
-				return "", err
+			// Sometimes warnings cause a 1 exit-code, but the file is still created
+			slog.Info("Exit code", slog.Any("code", exiterr.ExitCode()))
+			if exiterr.ExitCode() == 1 {
+				isError = false
 			}
-		} else {
-			fmt.Println(fmt.Sprint(err) + ": " + out.String() + ":" + stderr.String())
+		}
+
+		if isError {
+			slog.Error("Error converting file",
+				slog.Any("error", err),
+				slog.String("stdout", out.String()),
+				slog.String("stderr", stderr.String()),
+			)
 			return "", err
 		}
 	}

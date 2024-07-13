@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"mime"
 	"net/http"
@@ -43,7 +42,7 @@ type Credentials struct {
 	Password string
 }
 
-func NewServer(config *config) (*Server, error) {
+func NewServer(config *ProxyConfig) (*Server, error) {
 	hashKey, err := hex.DecodeString(config.Auth.HashKey)
 	if err != nil {
 		return nil, err
@@ -68,12 +67,12 @@ func NewServer(config *config) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Serve() {
+func (s *Server) Serve() error {
 	slog.Info("Starting server", slog.String("port", s.addr))
-	log.Fatal(http.ListenAndServe(s.addr, s.router))
+	return http.ListenAndServe(s.addr, s.router)
 }
 
-func handleHome(feeds []feedConfig) http.HandlerFunc {
+func handleHome(feeds []FeedConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vmFeeds := make([]html.FeedInfo, len(feeds))
 		for i, feed := range feeds {
@@ -83,11 +82,11 @@ func handleHome(feeds []feedConfig) http.HandlerFunc {
 			}
 		}
 
-		html.Home(w, vmFeeds, partial(r))
+		html.Home(w, vmFeeds)
 	}
 }
 
-func handleFeed(outputDir string, feeds []feedConfig, s *securecookie.SecureCookie) http.HandlerFunc {
+func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCookie) http.HandlerFunc {
 	kepubConverter := &convert.KepubConverter{}
 	mobiConverter := &convert.MobiConverter{}
 
@@ -107,7 +106,7 @@ func handleFeed(outputDir string, feeds []feedConfig, s *securecookie.SecureCook
 
 		searchTerm := r.URL.Query().Get("search")
 		if searchTerm != "" {
-			queryURL = replaceSearchPlaceHolder(queryURL, searchTerm)
+			queryURL = strings.Replace(queryURL, "{searchTerms}", searchTerm, 1)
 		}
 
 		resp, err := fetchFromUrl(queryURL, getCredentials(r, feeds, s))
@@ -122,8 +121,7 @@ func handleFeed(outputDir string, feeds []feedConfig, s *securecookie.SecureCook
 			return
 		}
 
-		contentType := resp.Header.Get("Content-Type")
-		mimeType, _, err := mime.ParseMediaType(contentType)
+		mimeType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 		if err != nil {
 			handleError(r, w, "Failed to parse content type", err)
 		}
@@ -140,7 +138,7 @@ func handleFeed(outputDir string, feeds []feedConfig, s *securecookie.SecureCook
 				Feed: feed,
 			}
 
-			if err = html.Feed(w, feedParams, partial(r)); err != nil {
+			if err = html.Feed(w, feedParams); err != nil {
 				handleError(r, w, "Failed to render feed", err)
 				return
 			}
@@ -187,7 +185,7 @@ func handleAuth(s *securecookie.SecureCookie) http.HandlerFunc {
 		}
 
 		if r.Method == "GET" {
-			html.Login(w, html.LoginParams{ReturnURL: returnUrl}, partial(r))
+			html.Login(w, html.LoginParams{ReturnURL: returnUrl})
 			return
 		}
 
@@ -231,7 +229,7 @@ func handleAuth(s *securecookie.SecureCookie) http.HandlerFunc {
 	}
 }
 
-func getCredentials(r *http.Request, feeds []feedConfig, s *securecookie.SecureCookie) *Credentials {
+func getCredentials(r *http.Request, feeds []FeedConfig, s *securecookie.SecureCookie) *Credentials {
 	if !r.URL.Query().Has("q") {
 		return nil
 	}
@@ -243,7 +241,7 @@ func getCredentials(r *http.Request, feeds []feedConfig, s *securecookie.SecureC
 
 	// Try to get credentials from the config first
 	for _, feed := range feeds {
-		if !feed.HasCredentials() {
+		if feed.Username == "" || feed.Password == "" {
 			continue
 		}
 
@@ -291,14 +289,6 @@ func fetchFromUrl(url string, credentials *Credentials) (*http.Response, error) 
 func handleError(r *http.Request, w http.ResponseWriter, message string, err error) {
 	slog.Error(message, slog.String("path", r.URL.RawPath), slog.Any("error", err))
 	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-}
-
-func replaceSearchPlaceHolder(url string, searchTerm string) string {
-	return strings.Replace(url, "{searchTerms}", searchTerm, 1)
-}
-
-func partial(req *http.Request) string {
-	return req.URL.Query().Get("partial")
 }
 
 func downloadFile(path string, resp *http.Response) error {

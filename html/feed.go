@@ -92,6 +92,7 @@ func constructLink(url string, entry opds.Entry) LinkViewModel {
 
 	return vm
 }
+
 func resolveHref(feedUrl string, relativePath string) string {
 	baseUrl, err := url.Parse(feedUrl)
 	if err != nil {

@@ -5,44 +5,41 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/gorilla/securecookie"
 	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/basicflag"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
 
-type config struct {
+type ProxyConfig struct {
 	Port  string       `koanf:"port"`
-	Auth  auth         `koanf:"auth"`
-	Feeds []feedConfig `koanf:"feeds" `
+	Auth  AuthConfig   `koanf:"auth"`
+	Feeds []FeedConfig `koanf:"feeds" `
 }
 
-type auth struct {
+type AuthConfig struct {
 	HashKey  string `koanf:"hash_key"`
 	BlockKey string `koanf:"block_key"`
 }
 
-type feedConfig struct {
+type FeedConfig struct {
 	Name     string `koanf:"name"`
 	Url      string `koanf:"url"`
 	Username string `koanf:"username"`
 	Password string `koanf:"password"`
 }
 
-func (f feedConfig) HasCredentials() bool {
-	return f.Username != "" && f.Password != ""
-}
-
-var k = koanf.New(".")
-
 func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	fs.String("port", "8080", "port to listen on")
+	// These aren't mapped to the config file.
 	configPath := fs.String("config", "config.yml", "config file to load")
 	generateKeys := fs.Bool("generate-keys", false, "generate cookie signing keys and exit")
+
+	port := fs.String("port", "8080", "port to listen on")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
@@ -52,18 +49,22 @@ func main() {
 		os.Exit(0)
 	}
 
+	var k = koanf.New(".")
+
 	// Load config file from disk.
 	// Feed options must be defined here.
 	if err := k.Load(file.Provider(*configPath), yaml.Parser()); err != nil && !os.IsNotExist(err) {
 		log.Fatal(err)
 	}
 
-	// Flags take precedence over config file.
-	if err := k.Load(basicflag.Provider(fs, "."), nil); err != nil {
+	// Selectively add command line options to the config. Overriding the config file.
+	if err := k.Load(confmap.Provider(map[string]interface{}{
+		"port": *port,
+	}, "."), nil); err != nil {
 		log.Fatal(err)
 	}
 
-	config := config{}
+	config := ProxyConfig{}
 	k.Unmarshal("", &config)
 
 	if len(config.Feeds) == 0 {
@@ -82,7 +83,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	server.Serve()
+
+	if err = server.Serve(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
 
 func displayKeys() (string, string) {

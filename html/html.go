@@ -39,11 +39,8 @@ type LoginParams struct {
 	ReturnURL string
 }
 
-func Login(w io.Writer, p LoginParams, partial string) error {
-	if partial == "" {
-		partial = "layout.html"
-	}
-	return login.ExecuteTemplate(w, partial, p)
+func Login(w io.Writer, p LoginParams) error {
+	return login.Execute(w, p)
 }
 
 type FeedParams struct {
@@ -51,14 +48,9 @@ type FeedParams struct {
 	Feed *opds.Feed
 }
 
-func Feed(w io.Writer, p FeedParams, partial string) error {
-	if partial == "" {
-		partial = "layout.html"
-	}
-
+func Feed(w io.Writer, p FeedParams) error {
 	vm := convertFeed(&p)
-
-	return feed.ExecuteTemplate(w, partial, vm)
+	return feed.Execute(w, vm)
 }
 
 type FeedInfo struct {
@@ -66,11 +58,8 @@ type FeedInfo struct {
 	URL   string
 }
 
-func Home(w io.Writer, vm []FeedInfo, partial string) error {
-	if partial == "" {
-		partial = "layout.html"
-	}
-	return home.ExecuteTemplate(w, partial, vm)
+func Home(w io.Writer, vm []FeedInfo) error {
+	return home.Execute(w, vm)
 }
 
 func StaticFiles() embed.FS {
