@@ -19,8 +19,52 @@ By running your own OPDS Proxy you can allow eReaders to navigate and download b
 
 ## Getting Started
 1. Download the latest release binary or pull the latest docker image.
-2. Configure your OPDS feeds via environment variables or config file (YML or JSON)
-3. Navigate your library and download books to your eReader
+2. Configure your OPDS Proxy settings via config file / environment variables.
+3. Start `opds-proxy`.
+3. Navigate your library and download books to your eReader via web interface.
+
+### Configuration Format
+
+Most settings are defined in a `config.yml`. 
+
+```yml
+# Optional port to listen on (default 8080)
+port: 5228
+# Optional Cookie Encryption Keys
+# If these keys aren't set, they are automatically re-generated and logged on startup.
+# When new keys are generated all existing cookies are no longer valid. 
+# You can generate new keys by running `opds-proxy -generate-keys` and then copy them to your config.
+auth:
+  hash_key: [32 bit hash key]
+  block_key: [32 bit block key]
+# List of feed selections presented in the UI
+feeds:
+  - name: Some Feed
+    url: http://some-feed.com/opds
+    # Optional Credentials
+    # If present, users will not be prompted for credentials in the web interface.
+    # The server will take care of sending these with requests to the feed URL.
+    # This is useful if you want to make all feeds public or provide a single authentication
+    # layer in front of OPDS Proxy without having users remember multiple logins for individual feeds.
+    username: user
+    password: password
+  - name: Some Other feed
+    url: http://some-other-feed.com/opds
+```
+
+Some config options can be set via command flags. These take precedence over the config file.
+
+```shell
+# To set the port via flags
+opds-proxy -port 5228
+
+# To generate new cookie keys and exit
+opds-proxy -generate-keys
+
+# To use a config file that isn't named `config.yml` in the current path
+opds-proxy -config ~/.config/opds-proxy-config.yml 
+```
+
 
 ## Motivation
 KOReader is great and I've been running it for years on my jailbroken Kindle and Kobo eReaders.
