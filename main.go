@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
+	"github.com/gorilla/securecookie"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/basicflag"
 	"github.com/knadh/koanf/providers/file"
@@ -13,7 +16,13 @@ import (
 
 type config struct {
 	Port  string       `koanf:"port"`
+	Auth  auth         `koanf:"auth"`
 	Feeds []feedConfig `koanf:"feeds" `
+}
+
+type auth struct {
+	HashKey  string `koanf:"hash_key"`
+	BlockKey string `koanf:"block_key"`
 }
 
 type feedConfig struct {
@@ -27,7 +36,13 @@ func main() {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	fs.String("port", "8080", "port to listen on")
 	configPath := fs.String("config", "config.yml", "config file to load")
+	generateKeys := fs.Bool("generate-keys", false, "generate cookie signing keys and exit")
 	if err := fs.Parse(os.Args[1:]); err != nil {
+		log.Fatal(err)
+	}
+
+	if *generateKeys {
+		displayKeys()
 		os.Exit(0)
 	}
 
@@ -49,6 +64,30 @@ func main() {
 		log.Fatal("No feeds defined in config")
 	}
 
-	server := NewServer(&config)
+	if config.Auth.HashKey == "" || config.Auth.BlockKey == "" {
+		log.Println("Generating new cookie signing credentials")
+		hashKey, blockKey := displayKeys()
+
+		config.Auth.HashKey = hashKey
+		config.Auth.BlockKey = blockKey
+
+	}
+
+	server, err := NewServer(&config)
+	if err != nil {
+		log.Fatal(err)
+	}
 	server.Serve()
+}
+
+func displayKeys() (string, string) {
+	hashKey := hex.EncodeToString(securecookie.GenerateRandomKey(32))
+	blockKey := hex.EncodeToString(securecookie.GenerateRandomKey(32))
+
+	log.Println("Set these values in your config file to persist authentication between server restarts.")
+	fmt.Println("auth:")
+	fmt.Printf("  hash_key: %s\n", hashKey)
+	fmt.Printf("  block_key: %s\n", blockKey)
+
+	return hashKey, blockKey
 }

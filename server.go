@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -34,6 +35,7 @@ var (
 type Server struct {
 	addr   string
 	router *http.ServeMux
+	s      *securecookie.SecureCookie
 }
 
 type Credentials struct {
@@ -41,19 +43,29 @@ type Credentials struct {
 	Password string
 }
 
-var s = securecookie.New(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
+func NewServer(config *config) (*Server, error) {
+	hashKey, err := hex.DecodeString(config.Auth.HashKey)
+	if err != nil {
+		return nil, err
+	}
+	blockKey, err := hex.DecodeString(config.Auth.BlockKey)
+	if err != nil {
+		return nil, err
+	}
 
-func NewServer(config *config) *Server {
+	s := securecookie.New(hashKey, blockKey)
+
 	router := http.NewServeMux()
 	router.HandleFunc("GET /{$}", handleHome(config.Feeds))
-	router.HandleFunc("GET /feed", handleFeed("tmp/"))
-	router.HandleFunc("/auth", handleAuth())
+	router.HandleFunc("GET /feed", handleFeed("tmp/", s))
+	router.HandleFunc("/auth", handleAuth(s))
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
 	return &Server{
 		addr:   ":" + config.Port,
 		router: router,
-	}
+		s:      s,
+	}, nil
 }
 
 func (s *Server) Serve() {
@@ -75,7 +87,7 @@ func handleHome(feeds []feedConfig) http.HandlerFunc {
 	}
 }
 
-func handleFeed(outputDir string) http.HandlerFunc {
+func handleFeed(outputDir string, s *securecookie.SecureCookie) http.HandlerFunc {
 	kepubConverter := &convert.KepubConverter{}
 	mobiConverter := &convert.MobiConverter{}
 
@@ -98,7 +110,7 @@ func handleFeed(outputDir string) http.HandlerFunc {
 			queryURL = replaceSearchPlaceHolder(queryURL, searchTerm)
 		}
 
-		resp, err := fetchFromUrl(queryURL, getCredentials(r))
+		resp, err := fetchFromUrl(queryURL, getCredentials(r, s))
 		if err != nil {
 			handleError(r, w, "Failed to fetch", err)
 			return
@@ -166,7 +178,7 @@ func handleFeed(outputDir string) http.HandlerFunc {
 	}
 }
 
-func handleAuth() http.HandlerFunc {
+func handleAuth(s *securecookie.SecureCookie) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		returnUrl := r.URL.Query().Get("return")
 		if returnUrl == "" {
@@ -219,7 +231,7 @@ func handleAuth() http.HandlerFunc {
 	}
 }
 
-func getCredentials(r *http.Request) *Credentials {
+func getCredentials(r *http.Request, s *securecookie.SecureCookie) *Credentials {
 	cookie, err := r.Cookie("auth-creds")
 	if err != nil {
 		return nil
