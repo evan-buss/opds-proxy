@@ -16,12 +16,8 @@ import (
 	"github.com/evan-buss/opds-proxy/convert"
 	"github.com/evan-buss/opds-proxy/html"
 	"github.com/evan-buss/opds-proxy/opds"
+	"github.com/gorilla/securecookie"
 )
-
-type Server struct {
-	addr   string
-	router *http.ServeMux
-}
 
 const (
 	MOBI_MIME = "application/x-mobipocket-ebook"
@@ -35,10 +31,23 @@ var (
 	_ = mime.AddExtensionType(".mobi", MOBI_MIME)
 )
 
+type Server struct {
+	addr   string
+	router *http.ServeMux
+}
+
+type Credentials struct {
+	Username string
+	Password string
+}
+
+var s = securecookie.New(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
+
 func NewServer(config *config) *Server {
 	router := http.NewServeMux()
 	router.HandleFunc("GET /{$}", handleHome(config.Feeds))
 	router.HandleFunc("GET /feed", handleFeed("tmp/"))
+	router.HandleFunc("/auth", handleAuth())
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
 	return &Server{
@@ -90,12 +99,17 @@ func handleFeed(outputDir string) http.HandlerFunc {
 			queryURL = replaceSearchPlaceHolder(queryURL, searchTerm)
 		}
 
-		resp, err := fetchFromUrl(queryURL)
+		resp, err := fetchFromUrl(queryURL, getCredentials(r))
 		if err != nil {
 			handleError(r, w, "Failed to fetch", err)
 			return
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			http.Redirect(w, r, "/auth?return="+r.URL.String(), http.StatusFound)
+			return
+		}
 
 		contentType := resp.Header.Get("Content-Type")
 		mimeType, _, err := mime.ParseMediaType(contentType)
@@ -153,7 +167,82 @@ func handleFeed(outputDir string) http.HandlerFunc {
 	}
 }
 
-func fetchFromUrl(url string) (*http.Response, error) {
+func handleAuth() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		returnUrl := r.URL.Query().Get("return")
+		if returnUrl == "" {
+			http.Error(w, "No return URL specified", http.StatusBadRequest)
+			return
+		}
+
+		if r.Method == "GET" {
+			html.Login(w, html.LoginParams{ReturnURL: returnUrl}, partial(r))
+			return
+		}
+
+		if r.Method == "POST" {
+			username := r.FormValue("username")
+			password := r.FormValue("password")
+
+			rUrl, err := url.Parse(returnUrl)
+			if err != nil {
+				http.Error(w, "Invalid return URL", http.StatusBadRequest)
+			}
+			domain, err := url.Parse(rUrl.Query().Get("q"))
+			if err != nil {
+				http.Error(w, "Invalid site", http.StatusBadRequest)
+			}
+
+			value := map[string]Credentials{
+				domain.Hostname(): {Username: username, Password: password},
+			}
+
+			encoded, err := s.Encode("auth-creds", value)
+			if err != nil {
+				handleError(r, w, "Failed to encode credentials", err)
+				return
+			}
+			cookie := &http.Cookie{
+				Name:  "auth-creds",
+				Value: encoded,
+				Path:  "/",
+				// Kobo fails to set cookies with HttpOnly or Secure flags
+				Secure:   false,
+				HttpOnly: false,
+			}
+
+			http.SetCookie(w, cookie)
+			http.Redirect(w, r, returnUrl, http.StatusFound)
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func getCredentials(r *http.Request) *Credentials {
+	cookie, err := r.Cookie("auth-creds")
+	if err != nil {
+		return nil
+	}
+
+	value := make(map[string]*Credentials)
+	if err = s.Decode("auth-creds", cookie.Value, &value); err != nil {
+		return nil
+	}
+
+	if !r.URL.Query().Has("q") {
+		return nil
+	}
+
+	feedUrl, err := url.Parse(r.URL.Query().Get("q"))
+	if err != nil {
+		return nil
+	}
+
+	return value[feedUrl.Hostname()]
+}
+
+func fetchFromUrl(url string, credentials *Credentials) (*http.Response, error) {
 	client := &http.Client{
 		Timeout: 2 * time.Second,
 	}
@@ -162,7 +251,10 @@ func fetchFromUrl(url string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth("public", "evanbuss")
+
+	if credentials != nil {
+		req.SetBasicAuth(credentials.Username, credentials.Password)
+	}
 
 	return client.Do(req)
 }

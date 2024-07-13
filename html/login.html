@@ -1,0 +1,48 @@
+{{ define "content" }}
+<main>
+    <h1>{{index (urlParse .ReturnURL) "query" | trimPrefix "q=" }}</h1>
+    <p>Log in to access this feed</p>
+    <div id="content">
+        <form method="post">
+            <input type="text" name="username" placeholder="Username" />
+            <input type="password" name="password" placeholder="Password" />
+            <button type="submit">Log In</button>
+        </form>
+    </div>
+</main>
+
+<style>
+    main {
+        margin-top: 2rem;
+        text-align: center;
+    }
+
+    h1 {
+        font-size: 1.25rem;
+    }
+
+    form {
+        margin: 0 auto;
+    }
+
+    input {
+        appearance: none;
+        border: 1px solid rgb(0, 0, 0, 0.8);
+        display: block;
+        margin: 1rem auto;
+        padding: 0.8rem;
+        border-radius: 2px;
+    }
+
+    button {
+        font-style: normal;
+        padding: 0.8rem 1rem;
+        margin: 1rem auto;
+        display: block;
+        background-color: black;
+        color: white;
+        border: none;
+        border-radius: 2px;
+    }
+</style>
+{{ end }}

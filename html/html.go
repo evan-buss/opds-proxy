@@ -6,19 +6,36 @@ import (
 	"io"
 
 	"github.com/evan-buss/opds-proxy/opds"
+	sprig "github.com/go-task/slim-sprig/v3"
 )
 
 //go:embed *
 var files embed.FS
 
 var (
-	home = parse("home.html")
-	feed = parse("feed.html", "partials/search.html")
+	home  = parse("home.html")
+	feed  = parse("feed.html", "partials/search.html")
+	login = parse("login.html")
 )
 
 func parse(file ...string) *template.Template {
 	file = append(file, "layout.html")
-	return template.Must(template.New("layout.html").ParseFS(files, file...))
+	return template.Must(
+		template.New("layout.html").
+			Funcs(sprig.FuncMap()).
+			ParseFS(files, file...),
+	)
+}
+
+type LoginParams struct {
+	ReturnURL string
+}
+
+func Login(w io.Writer, p LoginParams, partial string) error {
+	if partial == "" {
+		partial = "layout.html"
+	}
+	return login.ExecuteTemplate(w, partial, p)
 }
 
 type FeedParams struct {
