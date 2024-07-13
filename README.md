@@ -77,7 +77,7 @@ That being said, the Kindle / Kobo native reader software is faster, better look
 - OPDS Proxy is pointed to the Calibre OPDS feed.
 - eReaders access OPDS Proxy via web browser. Book files are automatically converted to device-specific proprietary format on download.
 
-### Why Not Use An Exisitng Solution?
+### Why Not Use An Existing Solution?
 - Calibre
   - Good for metadata management but not for the web interface.
   - Doesn't support Kobo `.kepub` files natively without installing multiple plugins.
