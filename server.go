@@ -124,6 +124,7 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 		mimeType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 		if err != nil {
 			handleError(r, w, "Failed to parse content type", err)
+			return
 		}
 
 		if mimeType == ATOM_MIME {
@@ -159,6 +160,7 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 		filename, err := parseFileName(resp)
 		if err != nil {
 			handleError(r, w, "Failed to parse file name", err)
+			return
 		}
 
 		epubFile := filepath.Join(outputDir, filename)
@@ -168,10 +170,12 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 		outputFile, err := converter.Convert(epubFile)
 		if err != nil {
 			handleError(r, w, "Failed to convert epub", err)
+			return
 		}
 
 		if err = sendConvertedFile(w, outputFile); err != nil {
 			handleError(r, w, "Failed to send converted file", err)
+			return
 		}
 	}
 }
