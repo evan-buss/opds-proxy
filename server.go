@@ -57,7 +57,7 @@ func NewServer(config *config) (*Server, error) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /{$}", handleHome(config.Feeds))
-	router.HandleFunc("GET /feed", handleFeed("tmp/", s))
+	router.HandleFunc("GET /feed", handleFeed("tmp/", config.Feeds, s))
 	router.HandleFunc("/auth", handleAuth(s))
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
@@ -87,7 +87,7 @@ func handleHome(feeds []feedConfig) http.HandlerFunc {
 	}
 }
 
-func handleFeed(outputDir string, s *securecookie.SecureCookie) http.HandlerFunc {
+func handleFeed(outputDir string, feeds []feedConfig, s *securecookie.SecureCookie) http.HandlerFunc {
 	kepubConverter := &convert.KepubConverter{}
 	mobiConverter := &convert.MobiConverter{}
 
@@ -110,7 +110,7 @@ func handleFeed(outputDir string, s *securecookie.SecureCookie) http.HandlerFunc
 			queryURL = replaceSearchPlaceHolder(queryURL, searchTerm)
 		}
 
-		resp, err := fetchFromUrl(queryURL, getCredentials(r, s))
+		resp, err := fetchFromUrl(queryURL, getCredentials(r, feeds, s))
 		if err != nil {
 			handleError(r, w, "Failed to fetch", err)
 			return
@@ -231,7 +231,33 @@ func handleAuth(s *securecookie.SecureCookie) http.HandlerFunc {
 	}
 }
 
-func getCredentials(r *http.Request, s *securecookie.SecureCookie) *Credentials {
+func getCredentials(r *http.Request, feeds []feedConfig, s *securecookie.SecureCookie) *Credentials {
+	if !r.URL.Query().Has("q") {
+		return nil
+	}
+
+	feedUrl, err := url.Parse(r.URL.Query().Get("q"))
+	if err != nil {
+		return nil
+	}
+
+	// Try to get credentials from the config first
+	for _, feed := range feeds {
+		if !feed.HasCredentials() {
+			continue
+		}
+
+		configUrl, err := url.Parse(feed.Url)
+		if err != nil {
+			continue
+		}
+
+		if configUrl.Hostname() == feedUrl.Hostname() {
+			return &Credentials{Username: feed.Username, Password: feed.Password}
+		}
+	}
+
+	// Otherwise, try to get credentials from the cookie
 	cookie, err := r.Cookie("auth-creds")
 	if err != nil {
 		return nil
@@ -239,15 +265,6 @@ func getCredentials(r *http.Request, s *securecookie.SecureCookie) *Credentials 
 
 	value := make(map[string]*Credentials)
 	if err = s.Decode("auth-creds", cookie.Value, &value); err != nil {
-		return nil
-	}
-
-	if !r.URL.Query().Has("q") {
-		return nil
-	}
-
-	feedUrl, err := url.Parse(r.URL.Query().Get("q"))
-	if err != nil {
 		return nil
 	}
 

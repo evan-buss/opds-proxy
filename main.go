@@ -26,8 +26,14 @@ type auth struct {
 }
 
 type feedConfig struct {
-	Name string `koanf:"name"`
-	Url  string `koanf:"url"`
+	Name     string `koanf:"name"`
+	Url      string `koanf:"url"`
+	Username string `koanf:"username"`
+	Password string `koanf:"password"`
+}
+
+func (f feedConfig) HasCredentials() bool {
+	return f.Username != "" && f.Password != ""
 }
 
 var k = koanf.New(".")
@@ -70,7 +76,6 @@ func main() {
 
 		config.Auth.HashKey = hashKey
 		config.Auth.BlockKey = blockKey
-
 	}
 
 	server, err := NewServer(&config)
