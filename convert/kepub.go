@@ -2,7 +2,6 @@ package convert
 
 import (
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -26,8 +25,7 @@ func (kc *KepubConverter) Convert(input string) (string, error) {
 	kc.mutex.Lock()
 	defer kc.mutex.Unlock()
 
-	dir := filepath.Dir(input)
-	kepubFile := filepath.Join(dir, strings.Replace(filepath.Base(input), ".epub", ".kepub.epub", 1))
+	kepubFile := strings.Replace(input, ".epub", ".kepub.epub", 1)
 
 	cmd := exec.Command("kepubify", "-v", "-u", "-o", kepubFile, input)
 	if err := cmd.Run(); err != nil {

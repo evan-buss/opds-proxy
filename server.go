@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand"
 	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/evan-buss/opds-proxy/convert"
@@ -55,9 +57,9 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 	s := securecookie.New(hashKey, blockKey)
 
 	router := http.NewServeMux()
-	router.HandleFunc("GET /{$}", handleHome(config.Feeds))
-	router.HandleFunc("GET /feed", handleFeed("tmp/", config.Feeds, s))
-	router.HandleFunc("/auth", handleAuth(s))
+	router.Handle("GET /{$}", logger(handleHome(config.Feeds)))
+	router.Handle("GET /feed", logger(handleFeed("tmp/", config.Feeds, s)))
+	router.Handle("/auth", logger(handleAuth(s)))
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
 	return &Server{
@@ -65,6 +67,15 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 		router: router,
 		s:      s,
 	}, nil
+}
+
+func logger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		id := rand.Intn(1000)
+		next.ServeHTTP(w, r)
+		slog.Info("Request", slog.Int("id", id), slog.String("path", r.URL.Path), slog.String("query", r.URL.RawQuery), slog.Duration("duration", time.Since(start)))
+	})
 }
 
 func (s *Server) Serve() error {
@@ -89,6 +100,8 @@ func handleHome(feeds []FeedConfig) http.HandlerFunc {
 func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCookie) http.HandlerFunc {
 	kepubConverter := &convert.KepubConverter{}
 	mobiConverter := &convert.MobiConverter{}
+
+	mutex := sync.Mutex{}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryURL := r.URL.Query().Get("q")
@@ -144,6 +157,9 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 				return
 			}
 		}
+
+		mutex.Lock()
+		defer mutex.Unlock()
 
 		var converter convert.Converter
 		if strings.Contains(r.UserAgent(), "Kobo") && kepubConverter.Available() {
@@ -291,7 +307,7 @@ func fetchFromUrl(url string, credentials *Credentials) (*http.Response, error) 
 }
 
 func handleError(r *http.Request, w http.ResponseWriter, message string, err error) {
-	slog.Error(message, slog.String("path", r.URL.RawPath), slog.Any("error", err))
+	slog.Error(message, slog.String("path", r.URL.Path), slog.String("query", r.URL.RawQuery), slog.Any("error", err))
 	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
 }
 
@@ -329,11 +345,15 @@ func forwardResponse(w http.ResponseWriter, resp *http.Response) {
 }
 
 func sendConvertedFile(w http.ResponseWriter, filePath string) error {
-	defer os.Remove(filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
+		os.Remove(filePath)
 		return err
 	}
+	defer func() {
+		file.Close()
+		os.Remove(filePath)
+	}()
 
 	info, err := file.Stat()
 	if err != nil {
