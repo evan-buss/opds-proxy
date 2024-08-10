@@ -91,13 +91,12 @@ func requestMiddleware(next http.Handler) http.Handler {
 		id := uuid.New()
 		requestIP := r.Header.Get("X-Forwarded-For")
 		if requestIP == "" {
-			requestIP = r.RemoteAddr
+			requestIP, _, _ = net.SplitHostPort(r.RemoteAddr)
 		}
 
 		isLocal := true
 		for _, addr := range strings.Split(requestIP, ", ") {
-			host, _, _ := net.SplitHostPort(addr)
-			ip := net.ParseIP(host)
+			ip := net.ParseIP(addr)
 			if ip == nil || (!ip.IsPrivate() && !ip.IsLoopback()) {
 				isLocal = false
 				break
