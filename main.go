@@ -16,9 +16,10 @@ import (
 )
 
 type ProxyConfig struct {
-	Port  string       `koanf:"port"`
-	Auth  AuthConfig   `koanf:"auth"`
-	Feeds []FeedConfig `koanf:"feeds" `
+	Port      string       `koanf:"port"`
+	Auth      AuthConfig   `koanf:"auth"`
+	Feeds     []FeedConfig `koanf:"feeds" `
+	isDevMode bool
 }
 
 type AuthConfig struct {
@@ -38,6 +39,7 @@ func main() {
 	// These aren't mapped to the config file.
 	configPath := fs.String("config", "config.yml", "config file to load")
 	generateKeys := fs.Bool("generate-keys", false, "generate cookie signing keys and exit")
+	isDevMode := fs.Bool("dev", false, "enable development mode")
 
 	port := fs.String("port", "8080", "port to listen on")
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -79,6 +81,9 @@ func main() {
 		config.Auth.BlockKey = blockKey
 	}
 
+	// This should only be set by the command line flag,
+	// so we don't use koanf to set this.
+	config.isDevMode = *isDevMode
 	server, err := NewServer(&config)
 	if err != nil {
 		log.Fatal(err)

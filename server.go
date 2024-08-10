@@ -1,16 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
-	"math/rand"
 	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/evan-buss/opds-proxy/convert"
 	"github.com/evan-buss/opds-proxy/html"
 	"github.com/evan-buss/opds-proxy/opds"
+	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 )
 
@@ -44,6 +46,12 @@ type Credentials struct {
 	Password string
 }
 
+type contextKey string
+
+const (
+	requestLogger = contextKey("log")
+)
+
 func NewServer(config *ProxyConfig) (*Server, error) {
 	hashKey, err := hex.DecodeString(config.Auth.HashKey)
 	if err != nil {
@@ -52,6 +60,10 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 	blockKey, err := hex.DecodeString(config.Auth.BlockKey)
 	if err != nil {
 		return nil, err
+	}
+
+	if !config.isDevMode {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	}
 
 	s := securecookie.New(hashKey, blockKey)
@@ -72,9 +84,28 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 func logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		id := rand.Intn(1000)
+		id := uuid.New()
+		requestIP := r.Header.Get("X-Forwarded-For")
+		if requestIP == "" {
+			requestIP = r.RemoteAddr
+		}
+
+		query, _ := url.QueryUnescape(r.URL.RawQuery)
+
+		log := slog.With(
+			slog.Group("request",
+				slog.String("id", id.String()),
+				slog.String("ip", requestIP),
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.String("query", query),
+				slog.String("user-agent", r.UserAgent()),
+			),
+		)
+
+		r = r.WithContext(context.WithValue(r.Context(), requestLogger, log))
 		next.ServeHTTP(w, r)
-		slog.Info("Request", slog.Int("id", id), slog.String("path", r.URL.Path), slog.String("query", r.URL.RawQuery), slog.Duration("duration", time.Since(start)))
+		log.Info("Request Completed", slog.String("duration", time.Since(start).String()))
 	})
 }
 
@@ -168,12 +199,20 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 			converter = mobiConverter
 		}
 
+		log := r.Context().Value(requestLogger).(*slog.Logger)
+		filename, err := parseFileName(resp)
+		if err == nil {
+			log = log.With(slog.String("file", filename))
+		}
+
 		if mimeType != EPUB_MIME || converter == nil {
 			forwardResponse(w, resp)
+			if filename != "" {
+				log.Info("Sent File")
+			}
 			return
 		}
 
-		filename, err := parseFileName(resp)
 		if err != nil {
 			handleError(r, w, "Failed to parse file name", err)
 			return
@@ -183,7 +222,7 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 		downloadFile(epubFile, resp)
 		defer os.Remove(epubFile)
 
-		outputFile, err := converter.Convert(epubFile)
+		outputFile, err := converter.Convert(log, epubFile)
 		if err != nil {
 			handleError(r, w, "Failed to convert epub", err)
 			return
@@ -193,6 +232,8 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 			handleError(r, w, "Failed to send converted file", err)
 			return
 		}
+
+		log.Info("Sent Converted File", slog.String("converter", reflect.TypeOf(converter).String()))
 	}
 }
 
@@ -307,7 +348,8 @@ func fetchFromUrl(url string, credentials *Credentials) (*http.Response, error) 
 }
 
 func handleError(r *http.Request, w http.ResponseWriter, message string, err error) {
-	slog.Error(message, slog.String("path", r.URL.Path), slog.String("query", r.URL.RawQuery), slog.Any("error", err))
+	log := r.Context().Value(requestLogger).(*slog.Logger)
+	log.Error(message, slog.Any("error", err))
 	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
 }
 

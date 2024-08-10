@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"log/slog"
 	"os/exec"
 	"strings"
 	"sync"
@@ -21,7 +22,7 @@ func (kc *KepubConverter) Available() bool {
 	return kc.available
 }
 
-func (kc *KepubConverter) Convert(input string) (string, error) {
+func (kc *KepubConverter) Convert(_ *slog.Logger, input string) (string, error) {
 	kc.mutex.Lock()
 	defer kc.mutex.Unlock()
 

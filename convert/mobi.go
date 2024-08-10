@@ -23,7 +23,7 @@ func (mc *MobiConverter) Available() bool {
 	return mc.available
 }
 
-func (mc *MobiConverter) Convert(input string) (string, error) {
+func (mc *MobiConverter) Convert(log *slog.Logger, input string) (string, error) {
 	mc.mutex.Lock()
 	defer mc.mutex.Unlock()
 
@@ -49,14 +49,14 @@ func (mc *MobiConverter) Convert(input string) (string, error) {
 		isError := true
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			// Sometimes warnings cause a 1 exit-code, but the file is still created
-			slog.Info("Exit code", slog.Any("code", exiterr.ExitCode()))
+			log.Info("Exit code", slog.Any("code", exiterr.ExitCode()))
 			if exiterr.ExitCode() == 1 {
 				isError = false
 			}
 		}
 
 		if isError {
-			slog.Error("Error converting file",
+			log.Error("Error converting file",
 				slog.Any("error", err),
 				slog.String("stdout", out.String()),
 				slog.String("stderr", stderr.String()),
