@@ -28,10 +28,15 @@ type AuthConfig struct {
 }
 
 type FeedConfig struct {
-	Name     string `koanf:"name"`
-	Url      string `koanf:"url"`
-	Username string `koanf:"username"`
-	Password string `koanf:"password"`
+	Name string          `koanf:"name"`
+	Url  string          `koanf:"url"`
+	Auth *FeedConfigAuth `koanf:"auth"`
+}
+
+type FeedConfigAuth struct {
+	Username  string `koanf:"username"`
+	Password  string `koanf:"password"`
+	LocalOnly bool   `koanf:"local_only"`
 }
 
 func main() {

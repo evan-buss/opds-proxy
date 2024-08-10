@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -49,8 +50,11 @@ type Credentials struct {
 type contextKey string
 
 const (
-	requestLogger = contextKey("log")
+	requestLogger  = contextKey("requestLogger")
+	isLocalRequest = contextKey("isLocalRequest")
 )
+
+const cookieName = "auth-creds"
 
 func NewServer(config *ProxyConfig) (*Server, error) {
 	hashKey, err := hex.DecodeString(config.Auth.HashKey)
@@ -69,9 +73,9 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 	s := securecookie.New(hashKey, blockKey)
 
 	router := http.NewServeMux()
-	router.Handle("GET /{$}", logger(handleHome(config.Feeds)))
-	router.Handle("GET /feed", logger(handleFeed("tmp/", config.Feeds, s)))
-	router.Handle("/auth", logger(handleAuth(s)))
+	router.Handle("GET /{$}", requestMiddleware(handleHome(config.Feeds)))
+	router.Handle("GET /feed", requestMiddleware(handleFeed("tmp/", config.Feeds, s)))
+	router.Handle("/auth", requestMiddleware(handleAuth(s)))
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
 	return &Server{
@@ -81,7 +85,7 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 	}, nil
 }
 
-func logger(next http.Handler) http.Handler {
+func requestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		id := uuid.New()
@@ -90,8 +94,18 @@ func logger(next http.Handler) http.Handler {
 			requestIP = r.RemoteAddr
 		}
 
-		query, _ := url.QueryUnescape(r.URL.RawQuery)
+		isLocal := true
+		for _, addr := range strings.Split(requestIP, ", ") {
+			host, _, _ := net.SplitHostPort(addr)
+			ip := net.ParseIP(host)
+			if ip == nil || (!ip.IsPrivate() && !ip.IsLoopback()) {
+				isLocal = false
+				break
+			}
+		}
+		ctx := context.WithValue(r.Context(), isLocalRequest, isLocal)
 
+		query, _ := url.QueryUnescape(r.URL.RawQuery)
 		log := slog.With(
 			slog.Group("request",
 				slog.String("id", id.String()),
@@ -103,7 +117,9 @@ func logger(next http.Handler) http.Handler {
 			),
 		)
 
-		r = r.WithContext(context.WithValue(r.Context(), requestLogger, log))
+		ctx = context.WithValue(ctx, requestLogger, log)
+		r = r.WithContext(ctx)
+
 		next.ServeHTTP(w, r)
 		log.Info("Request Completed", slog.String("duration", time.Since(start).String()))
 	})
@@ -267,13 +283,13 @@ func handleAuth(s *securecookie.SecureCookie) http.HandlerFunc {
 				domain.Hostname(): {Username: username, Password: password},
 			}
 
-			encoded, err := s.Encode("auth-creds", value)
+			encoded, err := s.Encode(cookieName, value)
 			if err != nil {
 				handleError(r, w, "Failed to encode credentials", err)
 				return
 			}
 			cookie := &http.Cookie{
-				Name:  "auth-creds",
+				Name:  cookieName,
 				Value: encoded,
 				Path:  "/",
 				// Kobo fails to set cookies with HttpOnly or Secure flags
@@ -295,39 +311,48 @@ func getCredentials(r *http.Request, feeds []FeedConfig, s *securecookie.SecureC
 		return nil
 	}
 
-	feedUrl, err := url.Parse(r.URL.Query().Get("q"))
+	requestUrl, err := url.Parse(r.URL.Query().Get("q"))
 	if err != nil {
 		return nil
 	}
 
 	// Try to get credentials from the config first
 	for _, feed := range feeds {
-		if feed.Username == "" || feed.Password == "" {
-			continue
-		}
-
-		configUrl, err := url.Parse(feed.Url)
+		feedUrl, err := url.Parse(feed.Url)
 		if err != nil {
 			continue
 		}
 
-		if configUrl.Hostname() == feedUrl.Hostname() {
-			return &Credentials{Username: feed.Username, Password: feed.Password}
+		if feedUrl.Hostname() != requestUrl.Hostname() {
+			continue
 		}
+
+		// Only set feed credentials for local requests
+		// when the auth config has local_only flag
+		isLocal := r.Context().Value(isLocalRequest).(bool)
+		if !isLocal && feed.Auth.LocalOnly {
+			continue
+		}
+
+		if feed.Auth == nil || feed.Auth.Username == "" || feed.Auth.Password == "" {
+			continue
+		}
+
+		return &Credentials{Username: feed.Auth.Username, Password: feed.Auth.Password}
 	}
 
 	// Otherwise, try to get credentials from the cookie
-	cookie, err := r.Cookie("auth-creds")
+	cookie, err := r.Cookie(cookieName)
 	if err != nil {
 		return nil
 	}
 
 	value := make(map[string]*Credentials)
-	if err = s.Decode("auth-creds", cookie.Value, &value); err != nil {
+	if err = s.Decode(cookieName, cookie.Value, &value); err != nil {
 		return nil
 	}
 
-	return value[feedUrl.Hostname()]
+	return value[requestUrl.Hostname()]
 }
 
 func fetchFromUrl(url string, credentials *Credentials) (*http.Response, error) {

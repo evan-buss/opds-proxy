@@ -41,13 +41,17 @@ auth:
 feeds:
   - name: Some Feed
     url: http://some-feed.com/opds
-    # Optional Credentials
+    # (Optional) Feed Authentication Credentials
     # If present, users will not be prompted for credentials in the web interface.
     # The server will take care of sending these with requests to the feed URL.
     # This is useful if you want to make all feeds public or provide a single authentication
     # layer in front of OPDS Proxy without having users remember multiple logins for individual feeds.
-    username: user
-    password: password
+    auth: 
+      username: user
+      password: password
+      # (Optional) Only provide the credentials when request comes from private IP address
+      # Requires all `X-Forwarded-For` IPs to be private. Make sure you trust your reverse proxy chain.
+      local_only: true
   - name: Some Other feed
     url: http://some-other-feed.com/opds
 ```
@@ -56,13 +60,13 @@ Some config options can be set via command flags. These take precedence over the
 
 ```shell
 # To set the port via flags
-opds-proxy -port 5228
+opds-proxy --port 5228
 
 # To generate new cookie keys and exit
-opds-proxy -generate-keys
+opds-proxy --generate-keys
 
 # To use a config file that isn't named `config.yml` in the current path
-opds-proxy -config ~/.config/opds-proxy-config.yml 
+opds-proxy --config ~/.config/opds-proxy-config.yml 
 ```
 
 
@@ -99,3 +103,18 @@ That being said, the Kindle / Kobo native reader software is faster, better look
   - Doesn't connect to your existing library 
   - Single User
     - Can't share library with friends / family
+
+## Known Issues
+Tested and confirmed working with Calibre's OPDS Feed. Any others may have issues. Please submit issues for any bugs you encounter.
+
+### Browser Quirks
+
+eReader browsers are extremely basic and outdated.
+
+Kobo Browser:
+- Basic Authentication not supported.
+- Cookies are cleared when browser is closed so you have to log in every time.
+- Cookies don't support `secure` or `httponly`. They just silently fail to be saved.
+- Modern CSS layouts like flexbox not supported.
+- Javascript mostly doesn't work.
+- Worst of all, each time a link is clicked 2 requests are sent for the same URL.
