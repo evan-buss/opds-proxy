@@ -132,6 +132,12 @@ func (s *Server) Serve() error {
 
 func handleHome(feeds []FeedConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Don't make user click the only feed
+		if len(feeds) == 1 {
+			http.Redirect(w, r, "/feed?q="+feeds[0].Url, http.StatusFound)
+			return
+		}
+
 		vmFeeds := make([]html.FeedInfo, len(feeds))
 		for i, feed := range feeds {
 			vmFeeds[i] = html.FeedInfo{
