@@ -131,7 +131,7 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy opds-proxy \
+          gcloud run deploy opds-proxy-demo \
             --image=evanbuss/opds-proxy:edge \
             --platform=managed \
             --region=us-central1 \
