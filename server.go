@@ -332,14 +332,14 @@ func getCredentials(r *http.Request, feeds []FeedConfig, s *securecookie.SecureC
 			continue
 		}
 
+		if feed.Auth == nil || feed.Auth.Username == "" || feed.Auth.Password == "" {
+			continue
+		}
+
 		// Only set feed credentials for local requests
 		// when the auth config has local_only flag
 		isLocal := r.Context().Value(isLocalRequest).(bool)
 		if !isLocal && feed.Auth.LocalOnly {
-			continue
-		}
-
-		if feed.Auth == nil || feed.Auth.Username == "" || feed.Auth.Password == "" {
 			continue
 		}
 
