@@ -11,6 +11,9 @@ jobs:
   docker:
     name: Docker Publish
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -90,8 +93,10 @@ jobs:
 
   release:
     name: Github Release
-    runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
