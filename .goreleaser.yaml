@@ -48,10 +48,9 @@ checksum:
 changelog:
   sort: asc
   filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^refactor:"
+    include:
+      - "^feat:"
+      - "^fix:"
 
 release:
   github:

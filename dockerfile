@@ -1,5 +1,4 @@
-# Dockerfile.distroless
-FROM golang:1.22 as base
+FROM golang:1.22 AS base
 
 RUN
 # Download and install kepubify

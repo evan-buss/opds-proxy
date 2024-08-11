@@ -91,6 +91,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
           repository: evanbuss/opds-proxy
           short-description: Access your OPDS library from any eReader
+          enable-url-completion: true # fixes relative image links in README
 
   release:
     name: Github Release
