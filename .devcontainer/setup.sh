@@ -14,3 +14,4 @@ chmod +x /usr/local/bin/kindlegen
 rm -rf kindlegen kindlegen_linux_2.6_i386_v2_9.tar.gz
 
 go install github.com/air-verse/air@latest
+go install github.com/goreleaser/goreleaser/v2@latest

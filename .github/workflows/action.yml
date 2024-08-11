@@ -71,6 +71,10 @@ jobs:
           platforms: ${{ steps.set-platforms.outputs.DOCKER_PLATFORMS}}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: 
+            VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+            REVISION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+            BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
 
       - name: Docker Hub Description
         uses: peter-evans/dockerhub-description@e98e4d1628a5f3be2be7c231e50981aee98723ae # v4.0.0

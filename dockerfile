@@ -23,7 +23,11 @@ RUN go mod verify
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o opds-proxy
+ARG VERSION=dev
+ARG REVISION=unknown
+ARG BUILDTIME=unknown
+
+RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${REVISION} -X main.date=${BUILDTIME}" -o opds-proxy
 
 FROM gcr.io/distroless/static
 

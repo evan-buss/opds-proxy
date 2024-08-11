@@ -2,24 +2,33 @@ package main
 
 import (
 	"encoding/hex"
-	"flag"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/evan-buss/opds-proxy/internal/envextended"
 	"github.com/gorilla/securecookie"
+	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
+	flag "github.com/spf13/pflag"
 )
+
+// Version information set at build time
+var version = "dev"
+var commit = "unknown"
+var date = "unknown"
 
 type ProxyConfig struct {
 	Port      string       `koanf:"port"`
 	Auth      AuthConfig   `koanf:"auth"`
 	Feeds     []FeedConfig `koanf:"feeds" `
-	isDevMode bool
+	DebugMode bool         `koanf:"debug"`
 }
 
 type AuthConfig struct {
@@ -40,43 +49,53 @@ type FeedConfigAuth struct {
 }
 
 func main() {
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	// These aren't mapped to the config file.
-	configPath := fs.String("config", "config.yml", "config file to load")
-	generateKeys := fs.Bool("generate-keys", false, "generate cookie signing keys and exit")
-	isDevMode := fs.Bool("dev", false, "enable development mode")
+	var k = koanf.New(".")
 
-	port := fs.String("port", "8080", "port to listen on")
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs.StringP("port", "p", "8080", "port to listen on")
+	fs.StringP("config", "c", "config.yml", "config file to load")
+	fs.Bool("generate-keys", false, "generate cookie signing keys and exit")
+	fs.BoolP("version", "v", false, "print version and exit")
+	fs.Usage = func() {
+		fmt.Println("Usage: opds-proxy [flags]")
+		fmt.Println(fs.FlagUsages())
+		os.Exit(0)
+	}
 	if err := fs.Parse(os.Args[1:]); err != nil {
-		log.Fatal(err)
+		log.Fatalf("error parsing flags: %v", err)
 	}
 
-	if *generateKeys {
+	if showVersion, _ := fs.GetBool("version"); showVersion {
+		fmt.Println("opds-proxy")
+		fmt.Printf("  Version: %s\n", version)
+		fmt.Printf("  Commit: %s\n", commit)
+		fmt.Printf("  Build Date: %s\n", date)
+		os.Exit(0)
+	}
+
+	if generate, _ := fs.GetBool("generate-keys"); generate {
 		displayKeys()
 		os.Exit(0)
 	}
 
-	var k = koanf.New(".")
-
-	// Load config file from disk.
-	// Feed options must be defined here.
-	if err := k.Load(file.Provider(*configPath), yaml.Parser()); err != nil && !os.IsNotExist(err) {
-		log.Fatal(err)
+	// YAML Config
+	configPath, _ := fs.GetString("config")
+	if err := k.Load(file.Provider(configPath), yaml.Parser()); err != nil && !os.IsNotExist(err) {
+		log.Fatalf("error loading config file: %v", err)
 	}
 
-	// Selectively add command line options to the config. Overriding the config file.
-	if err := k.Load(confmap.Provider(map[string]interface{}{
-		"port": *port,
-	}, "."), nil); err != nil {
-		log.Fatal(err)
+	// Environment Variables Config
+	if err := k.Load(envextended.ProviderWithValue("OPDS", ".", envCallback), json.Parser()); err != nil {
+		log.Fatalf("error loading environment variables: %v", err)
+	}
+
+	// CLI Flags Config
+	if err := k.Load(posflag.Provider(fs, ".", k), nil); err != nil {
+		log.Fatalf("error loading CLI flags: %v", err)
 	}
 
 	config := ProxyConfig{}
 	k.Unmarshal("", &config)
-
-	if len(config.Feeds) == 0 {
-		log.Fatal("No feeds defined in config")
-	}
 
 	if config.Auth.HashKey == "" || config.Auth.BlockKey == "" {
 		log.Println("Generating new cookie signing credentials")
@@ -86,16 +105,17 @@ func main() {
 		config.Auth.BlockKey = blockKey
 	}
 
-	// This should only be set by the command line flag,
-	// so we don't use koanf to set this.
-	config.isDevMode = *isDevMode
+	if err := config.Validate(); err != nil {
+		log.Fatalf("invalid configuration: %v", err)
+	}
+
 	server, err := NewServer(&config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("error creating server: %v", err)
 	}
 
 	if err = server.Serve(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+		log.Fatalf("error serving: %v", err)
 	}
 }
 
@@ -109,4 +129,37 @@ func displayKeys() (string, string) {
 	fmt.Printf("  block_key: %s\n", blockKey)
 
 	return hashKey, blockKey
+}
+
+func envCallback(key string, value string) (string, interface{}) {
+	key = strings.TrimPrefix(key, "OPDS__")
+	key = strings.ReplaceAll(key, "__", ".")
+	key = strings.ToLower(key)
+	return key, value
+}
+
+func (c *ProxyConfig) Validate() error {
+	if c.Port == "" {
+		return errors.New("port is required")
+	}
+
+	if c.Auth.HashKey == "" || c.Auth.BlockKey == "" {
+		return errors.New("auth.hash_key and auth.block_key are required")
+	}
+
+	if len(c.Feeds) == 0 {
+		return errors.New("at least one feed must be defined")
+	}
+
+	for _, feed := range c.Feeds {
+		if feed.Name == "" {
+			return errors.New("feed.name is required")
+		}
+
+		if feed.Url == "" {
+			return errors.New("feed.url is required")
+		}
+	}
+
+	return nil
 }

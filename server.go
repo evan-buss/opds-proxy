@@ -66,7 +66,7 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 		return nil, err
 	}
 
-	if !config.isDevMode {
+	if !config.DebugMode {
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	}
 

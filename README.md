@@ -22,6 +22,8 @@ By running your own OPDS Proxy you can allow eReaders to navigate and download b
 
 You can run OPDS Proxy as a Docker container or as an executable.
 
+Configuration is done via YAML file (default `config.yml`), environment variables, and command flags in that order of precedence.
+
 ### Docker 
 
 Docker images are published to [Docker Hub](https://hub.docker.com/r/evanbuss/opds-proxy) and the [GitHub Container Registry](https://github.com/evan-buss/opds-proxy/pkgs/container/opds-proxy).
@@ -32,6 +34,14 @@ services:
     image: evanbuss/opds-proxy:latest
     #image: ghcr.io/evan-buss/opds-proxy:latest
     container_name: opds-proxy
+    # You can also use environment variables to configure the container
+    # environment:
+    #   - OPDS__PORT=5228
+    #   - OPDS__FEEDS__0__NAME=Some Feed
+    #   - OPDS__FEEDS__0__URL=http://some-feed.com/opds
+    #   - OPDS__FEEDS__0__AUTH__USERNAME=user
+    #   - OPDS__FEEDS__0__AUTH__PASSWORD=password
+    #   - OPDS__FEEDS__0__AUTH__LOCAL_ONLY=true
     ports:
       - 8080:8080
     volumes:
