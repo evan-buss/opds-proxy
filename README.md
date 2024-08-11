@@ -17,11 +17,44 @@ By running your own OPDS Proxy you can allow eReaders to navigate and download b
     - Other: `*.epub`
 - Allows accessing HTTP basic auth OPDS feeds from primitive eReader browsers that don't natively support basic auth. 
 
+
 ## Getting Started
-1. Download the latest release binary or pull the latest docker image.
-2. Configure your OPDS Proxy settings via config file / environment variables.
-3. Start `opds-proxy`.
-3. Navigate your library and download books to your eReader via web interface.
+
+You can run OPDS Proxy as a Docker container or as an executable.
+
+### Docker 
+
+Docker images are published to [Docker Hub](https://hub.docker.com/r/evanbuss/opds-proxy) and the [GitHub Container Registry](https://github.com/evan-buss/opds-proxy/pkgs/container/opds-proxy).
+
+```yaml
+services:
+  opds-proxy:
+    image: evanbuss/opds-proxy:latest
+    #image: ghcr.io/evan-buss/opds-proxy:latest
+    container_name: opds-proxy
+    ports:
+      - 8080:8080
+    volumes:
+      - ./config.yml:/config.yml
+    restart: unless-stopped
+```
+### Executable
+
+See the [releases](https://github.com/evan-buss/opds-proxy/releases) page for the latest release.
+
+> [!NOTE]
+> The docker image includes the required dependencies to convert `.epub` files to device specific formats.
+> When running the executable, your path must include `kepubify` and `kindlegen` to enable conversion.
+> Otherwise, no conversion will be performed and the original source file will be served.
+
+```bash
+# Runs on port 8080 and looks for ./config.yml
+./opds-proxy
+
+# Runs on port 5228 and looks for ~/.config/opds-proxy-config.yml
+./opds-proxy --port 5228 --config ~/.config/opds-proxy-config.yml
+```
+
 
 ### Configuration Format
 
@@ -33,7 +66,7 @@ port: 5228
 # Optional Cookie Encryption Keys
 # If these keys aren't set, they are automatically re-generated and logged on startup.
 # When new keys are generated all existing cookies are no longer valid. 
-# You can generate new keys by running `opds-proxy -generate-keys` and then copy them to your config.
+# You can generate new keys by running `opds-proxy --generate-keys` and then copy them to your config.
 auth:
   hash_key: [32 bit hash key]
   block_key: [32 bit block key]
