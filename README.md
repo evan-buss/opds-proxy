@@ -5,7 +5,7 @@ Your eReader likely does not support OPDS, but it does have a rudimentary web br
 By running your own OPDS Proxy you can allow eReaders to navigate and download books from your library and any OPDS feed without installing custom eReader software.
 
 <p align="center">
-    <img src=".github/screenshot.png" height="400">
+    <img src="https://github.com/evan-buss/opds-proxy/raw/main/.github/screenshot.png" height="400">
 </p>
 
 ## Features
