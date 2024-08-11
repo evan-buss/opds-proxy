@@ -27,7 +27,7 @@ ARG VERSION=dev
 ARG REVISION=unknown
 ARG BUILDTIME=unknown
 
-RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${REVISION} -X main.date=${BUILDTIME}" -o opds-proxy
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${REVISION} -X main.date=${BUILDTIME}" -o opds-proxy
 
 FROM gcr.io/distroless/static
 
@@ -35,4 +35,4 @@ COPY --from=base /usr/local/bin/kepubify /usr/local/bin/kepubify
 COPY --from=base /usr/local/bin/kindlegen /usr/local/bin/kindlegen
 COPY --from=base /src/opds-proxy/app/opds-proxy .
 
-CMD ["./opds-proxy"]
+ENTRYPOINT ["./opds-proxy"]
