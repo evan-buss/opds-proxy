@@ -19,6 +19,7 @@ import (
 
 	"github.com/evan-buss/opds-proxy/convert"
 	"github.com/evan-buss/opds-proxy/html"
+	"github.com/evan-buss/opds-proxy/internal/debounce"
 	"github.com/evan-buss/opds-proxy/opds"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
@@ -72,9 +73,15 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 
 	s := securecookie.New(hashKey, blockKey)
 
+	// Kobo issues 2 requests for each clicked link. This middleware ensures
+	// we only process the first request and provide the same response for the second.
+	// This becomes more important when the requests aren't idempotent, such as triggering
+	// a download.
+	debounceMiddleware := debounce.NewDebounceMiddleware(time.Millisecond * 100)
+
 	router := http.NewServeMux()
 	router.Handle("GET /{$}", requestMiddleware(handleHome(config.Feeds)))
-	router.Handle("GET /feed", requestMiddleware(handleFeed("tmp/", config.Feeds, s)))
+	router.Handle("GET /feed", requestMiddleware(debounceMiddleware(handleFeed("tmp/", config.Feeds, s))))
 	router.Handle("/auth", requestMiddleware(handleAuth(s)))
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
@@ -120,7 +127,12 @@ func requestMiddleware(next http.Handler) http.Handler {
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
-		log.Info("Request Completed", slog.String("duration", time.Since(start).String()))
+
+		log.Info("Request Completed",
+			slog.String("duration", time.Since(start).String()),
+			slog.Bool("debounce", w.Header().Get("X-Debounce") == "true"),
+			slog.Bool("shared", w.Header().Get("X-Shared") == "true"),
+		)
 	})
 }
 
@@ -208,6 +220,7 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 				handleError(r, w, "Failed to render feed", err)
 				return
 			}
+			return
 		}
 
 		mutex.Lock()
