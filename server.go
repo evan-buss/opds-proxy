@@ -478,7 +478,7 @@ func filenameToAscii7(s string) string {
 	// Convert the rest of non-ASCII7 to hex representation
 	var sb strings.Builder
 	for _, letter := range noDiacr {
-		if letter > 0x7F {
+		if letter > unicode.MaxASCII {
 			sb.WriteString(fmt.Sprintf("_%X", letter))
 		} else {
 			sb.WriteRune(letter)
