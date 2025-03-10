@@ -1,6 +1,7 @@
 module github.com/evan-buss/opds-proxy
 
 go 1.22
+toolchain go1.23.7
 
 require (
 	github.com/knadh/koanf/parsers/yaml v0.1.0
@@ -31,7 +32,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/tidwall/sjson v1.2.5
-	golang.org/x/sync v0.11.0
+	golang.org/x/sync v0.12.0
 	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
