@@ -1,6 +1,7 @@
 module github.com/evan-buss/opds-proxy
 
 go 1.22
+toolchain go1.24.1
 
 require (
 	github.com/knadh/koanf/parsers/yaml v0.1.0
@@ -25,9 +26,9 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/knadh/koanf/maps v0.1.1 // indirect
+	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/json v0.1.0
-	github.com/knadh/koanf/providers/posflag v0.1.0
+	github.com/knadh/koanf/providers/posflag v1.0.0
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/tidwall/sjson v1.2.5
