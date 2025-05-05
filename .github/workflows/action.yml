@@ -115,6 +115,7 @@ jobs:
   
   deploy-demo:
     name: Deploy Demo to Cloud Run
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: demo
     needs: docker
