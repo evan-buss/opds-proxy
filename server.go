@@ -18,6 +18,7 @@ import (
 	"time"
 	"unicode"
 
+	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 
@@ -466,13 +467,9 @@ func sendConvertedFile(w http.ResponseWriter, filePath string) error {
 	return nil
 }
 
-func isMn(r rune) bool {
-	return unicode.Is(unicode.Mn, r) // Mn: nonspacing marks
-}
-
 func filenameToAscii7(s string) string {
-	// Remove most diacritics
-	t := transform.Chain(norm.NFD, transform.RemoveFunc(isMn), norm.NFC)
+	// Remove most diacritics and nonspacing marks (Mn)
+	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
 	noDiacr, _, _ := transform.String(t, s)
 
 	// Convert the rest of non-ASCII7 to hex representation
