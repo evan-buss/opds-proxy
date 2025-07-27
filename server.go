@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"mime"
 	"net"
 	"net/http"
@@ -24,21 +25,17 @@ import (
 	"github.com/evan-buss/opds-proxy/convert"
 	"github.com/evan-buss/opds-proxy/html"
 	"github.com/evan-buss/opds-proxy/internal/debounce"
+	"github.com/evan-buss/opds-proxy/internal/device"
+	"github.com/evan-buss/opds-proxy/internal/formats"
 	"github.com/evan-buss/opds-proxy/opds"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 )
 
-const (
-	MOBI_MIME = "application/x-mobipocket-ebook"
-	EPUB_MIME = "application/epub+zip"
-	ATOM_MIME = "application/atom+xml"
-)
-
 var (
-	_ = mime.AddExtensionType(".epub", EPUB_MIME)
-	_ = mime.AddExtensionType(".kepub.epub", EPUB_MIME)
-	_ = mime.AddExtensionType(".mobi", MOBI_MIME)
+	_ = mime.AddExtensionType(formats.EPUB.Extension, formats.EPUB.MimeType)
+	_ = mime.AddExtensionType(formats.KEPUB.Extension, formats.KEPUB.MimeType)
+	_ = mime.AddExtensionType(formats.MOBI.Extension, formats.MOBI.MimeType)
 )
 
 type Server struct {
@@ -85,7 +82,7 @@ func NewServer(config *ProxyConfig) (*Server, error) {
 
 	router := http.NewServeMux()
 	router.Handle("GET /{$}", requestMiddleware(handleHome(config.Feeds)))
-	router.Handle("GET /feed", requestMiddleware(debounceMiddleware(handleFeed("tmp/", config.Feeds, s))))
+	router.Handle("GET /feed", requestMiddleware(debounceMiddleware(handleFeed("tmp/", config.Feeds, s, config.DebugMode))))
 	router.Handle("/auth", requestMiddleware(handleAuth(s)))
 	router.Handle("GET /static/", http.FileServer(http.FS(html.StaticFiles())))
 
@@ -106,7 +103,7 @@ func requestMiddleware(next http.Handler) http.Handler {
 		}
 
 		isLocal := true
-		for _, addr := range strings.Split(requestIP, ", ") {
+		for addr := range strings.SplitSeq(requestIP, ", ") {
 			ip := net.ParseIP(addr)
 			if ip == nil || (!ip.IsPrivate() && !ip.IsLoopback()) {
 				isLocal = false
@@ -153,21 +150,20 @@ func handleHome(feeds []FeedConfig) http.HandlerFunc {
 			return
 		}
 
-		vmFeeds := make([]html.FeedInfo, len(feeds))
+		homeParams := make([]html.HomeParams, len(feeds))
 		for i, feed := range feeds {
-			vmFeeds[i] = html.FeedInfo{
+			homeParams[i] = html.HomeParams{
 				Title: feed.Name,
 				URL:   feed.Url,
 			}
 		}
 
-		html.Home(w, vmFeeds)
+		html.Home(w, homeParams)
 	}
 }
 
-func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCookie) http.HandlerFunc {
-	kepubConverter := &convert.KepubConverter{}
-	mobiConverter := &convert.MobiConverter{}
+func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCookie, debug bool) http.HandlerFunc {
+	converterManager := convert.NewConverterManager()
 
 	mutex := sync.Mutex{}
 
@@ -178,7 +174,7 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 			return
 		}
 
-		parsedUrl, err := url.PathUnescape(queryURL)
+		parsedUrl, err := url.QueryUnescape(queryURL)
 		queryURL = parsedUrl
 		if err != nil {
 			handleError(r, w, "Failed to parse URL", err)
@@ -190,7 +186,7 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 			queryURL = strings.Replace(queryURL, "{searchTerms}", searchTerm, 1)
 		}
 
-		resp, err := fetchFromUrl(queryURL, getCredentials(r, feeds, s))
+		resp, err := fetchFromUrl(queryURL, getCredentials(queryURL, r, feeds, s))
 		if err != nil {
 			handleError(r, w, "Failed to fetch", err)
 			return
@@ -208,10 +204,48 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 			return
 		}
 
-		if mimeType == ATOM_MIME {
-			feed, err := opds.ParseFeed(resp.Body)
+		format, exists := formats.FormatByMimeType(mimeType)
+		if !exists {
+			forwardResponse(w, resp)
+			return
+		}
+
+		deviceType := device.DetectDevice(r.UserAgent())
+
+		if format == formats.ATOM {
+			feed, err := opds.ParseFeed(resp.Body, debug)
 			if err != nil {
 				handleError(r, w, "Failed to parse feed", err)
+				return
+			}
+
+			entryID := r.URL.Query().Get("id")
+			if entryID != "" {
+				var entry opds.Entry
+				for _, e := range feed.Entries {
+					if e.ID == entryID {
+						entry = e
+						break
+					}
+				}
+
+				if entry.ID == "" {
+					handleError(r, w, "Entry not found", nil)
+					return
+				}
+
+				entryParams := html.EntryParams{
+					URL:              queryURL,
+					Feed:             feed,
+					Entry:            entry,
+					DeviceType:       deviceType,
+					ConverterManager: converterManager,
+				}
+
+				if err := html.Entry(w, entryParams); err != nil {
+					handleError(r, w, "Failed to render entry", err)
+				}
+
 				return
 			}
 
@@ -230,20 +264,15 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		var converter convert.Converter
-		if strings.Contains(r.UserAgent(), "Kobo") && kepubConverter.Available() {
-			converter = kepubConverter
-		} else if strings.Contains(r.UserAgent(), "Kindle") && mobiConverter.Available() {
-			converter = mobiConverter
-		}
-
 		log := r.Context().Value(requestLogger).(*slog.Logger)
 		filename, err := parseFileName(resp)
 		if err == nil {
 			log = log.With(slog.String("file", filename))
 		}
 
-		if mimeType != EPUB_MIME || converter == nil {
+		converter := converterManager.GetConverterForDevice(deviceType, format)
+
+		if converter == nil {
 			forwardResponse(w, resp)
 			if filename != "" {
 				log.Info("Sent File")
@@ -328,12 +357,8 @@ func handleAuth(s *securecookie.SecureCookie) http.HandlerFunc {
 	}
 }
 
-func getCredentials(r *http.Request, feeds []FeedConfig, s *securecookie.SecureCookie) *Credentials {
-	if !r.URL.Query().Has("q") {
-		return nil
-	}
-
-	requestUrl, err := url.Parse(r.URL.Query().Get("q"))
+func getCredentials(rawUrl string, req *http.Request, feeds []FeedConfig, s *securecookie.SecureCookie) *Credentials {
+	requestUrl, err := url.Parse(rawUrl)
 	if err != nil {
 		return nil
 	}
@@ -355,7 +380,7 @@ func getCredentials(r *http.Request, feeds []FeedConfig, s *securecookie.SecureC
 
 		// Only set feed credentials for local requests
 		// when the auth config has local_only flag
-		isLocal := r.Context().Value(isLocalRequest).(bool)
+		isLocal := req.Context().Value(isLocalRequest).(bool)
 		if !isLocal && feed.Auth.LocalOnly {
 			continue
 		}
@@ -364,7 +389,7 @@ func getCredentials(r *http.Request, feeds []FeedConfig, s *securecookie.SecureC
 	}
 
 	// Otherwise, try to get credentials from the cookie
-	cookie, err := r.Cookie(cookieName)
+	cookie, err := req.Cookie(cookieName)
 	if err != nil {
 		return nil
 	}
@@ -379,7 +404,7 @@ func getCredentials(r *http.Request, feeds []FeedConfig, s *securecookie.SecureC
 
 func fetchFromUrl(url string, credentials *Credentials) (*http.Response, error) {
 	client := &http.Client{
-		Timeout: 2 * time.Second,
+		Timeout: 10 * time.Second,
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -426,10 +451,7 @@ func parseFileName(resp *http.Response) (string, error) {
 }
 
 func forwardResponse(w http.ResponseWriter, resp *http.Response) {
-	for k, v := range resp.Header {
-		w.Header()[k] = v
-	}
-
+	maps.Copy(w.Header(), resp.Header)
 	io.Copy(w, resp.Body)
 }
 

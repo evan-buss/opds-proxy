@@ -1,6 +1,7 @@
 package html
 
 import (
+	"html/template"
 	"log"
 	"net/url"
 	"strings"
@@ -14,39 +15,64 @@ type FeedViewModel struct {
 	Navigation []NavigationViewModel
 	Links      []LinkViewModel
 }
+
+// NavigationData contains the common navigation and search data
+type NavigationData struct {
+	Search     string
+	Navigation []NavigationViewModel
+}
+
+// extractNavigationData extracts navigation and search links from a feed
+func extractNavigationData(feed *opds.Feed, baseURL string) NavigationData {
+	nav := NavigationData{
+		Search:     "",
+		Navigation: make([]NavigationViewModel, 0),
+	}
+
+	links := feed.GetLinks()
+
+	// Find search link
+	searchLinks := links.Where(func(link opds.Link) bool {
+		return link.Rel == "search"
+	})
+	if searchLink := searchLinks.First(); searchLink != nil {
+		nav.Search = resolveHref(baseURL, searchLink.Href)
+	}
+
+	// Extract navigation links
+	for _, link := range links.Navigation() {
+		nav.Navigation = append(nav.Navigation, NavigationViewModel{
+			Href:  resolveHref(baseURL, link.Href),
+			Label: strings.ToUpper(link.Rel[:1]) + link.Rel[1:],
+		})
+	}
+
+	return nav
+}
 type NavigationViewModel struct {
 	Href  string
 	Label string
 }
 
 type LinkViewModel struct {
-	Title      string
-	Author     string
-	ImageURL   string
-	Content    string
-	Href       string
-	IsDownload bool
+	Title     string
+	Author    string
+	ImageURL  string
+	ImageData template.URL // Base64 encoded image data
+	Content   string
+	Href      string
+	EntryID   string
 }
 
 func convertFeed(p *FeedParams) FeedViewModel {
+	// Extract navigation data using shared function
+	navData := extractNavigationData(p.Feed, p.URL)
+	
 	vm := FeedViewModel{
 		Title:      p.Feed.Title,
-		Search:     "",
+		Search:     navData.Search,
+		Navigation: navData.Navigation,
 		Links:      make([]LinkViewModel, 0),
-		Navigation: make([]NavigationViewModel, 0),
-	}
-
-	for _, link := range p.Feed.Links {
-		if link.Rel == "search" {
-			vm.Search = resolveHref(p.URL, link.Href)
-		}
-
-		if link.TypeLink == "application/atom+xml;type=feed;profile=opds-catalog" {
-			vm.Navigation = append(vm.Navigation, NavigationViewModel{
-				Href:  resolveHref(p.URL, link.Href),
-				Label: strings.ToUpper(link.Rel[:1]) + link.Rel[1:],
-			})
-		}
 	}
 
 	for _, entry := range p.Feed.Entries {
@@ -56,10 +82,11 @@ func convertFeed(p *FeedParams) FeedViewModel {
 	return vm
 }
 
-func constructLink(url string, entry opds.Entry) LinkViewModel {
+func constructLink(baseUrl string, entry opds.Entry) LinkViewModel {
 	vm := LinkViewModel{
 		Title:   entry.Title,
 		Content: entry.Content.Content,
+		// Href:    "/entry?q=" + url.QueryEscape(baseUrl) + "&id=" + entry.ID,
 	}
 
 	authors := make([]string, 0)
@@ -68,25 +95,24 @@ func constructLink(url string, entry opds.Entry) LinkViewModel {
 	}
 	vm.Author = strings.Join(authors, " & ")
 
-	for _, link := range entry.Links {
-		vm.IsDownload = link.IsDownload()
-		if link.IsNavigation() || link.IsDownload() {
-			vm.Href = resolveHref(url, link.Href)
-		}
+	navLinks := entry.GetLinks().Navigation()
 
-		// Prefer the first "thumbnail" image we find
-		if vm.ImageURL == "" && link.IsImage("thumbnail") {
-			vm.ImageURL = resolveHref(url, link.Href)
-		}
+	// If there is 1 link and it's a navigation link, don't link to the entry details page
+	if len(navLinks) == 1 {
+		vm.Href = url.QueryEscape(resolveHref(baseUrl, navLinks[0].Href))
+		vm.EntryID = ""
+	} else {
+		// Otherwise, link to the entry details page
+		vm.Href = url.QueryEscape(baseUrl)
+		vm.EntryID = entry.ID
 	}
 
-	// If we didn't find a thumbnail, use the first image we find
-	if vm.ImageURL == "" {
-		for _, link := range entry.Links {
-			if link.IsImage("") {
-				vm.ImageURL = resolveHref(url, link.Href)
-				break
-			}
+	imageLink := entry.Thumbnail()
+	if imageLink != nil {
+		if imageLink.IsDataImage() {
+			vm.ImageData = template.URL(imageLink.Href)
+		} else {
+			vm.ImageURL = resolveHref(baseUrl, imageLink.Href)
 		}
 	}
 

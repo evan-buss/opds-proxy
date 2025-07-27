@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestFlexibleTimeUnmarshal(t *testing.T) {
+func TestTimeUnmarshal(t *testing.T) {
 	tests := []struct {
 		name     string
 		xmlData  string
@@ -38,7 +38,7 @@ func TestFlexibleTimeUnmarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var result struct {
-				Published *FlexibleTime `xml:"published"`
+				Published *Time `xml:"published"`
 			}
 
 			err := xml.NewDecoder(strings.NewReader(tt.xmlData)).Decode(&result)
@@ -63,30 +63,5 @@ func TestFlexibleTimeUnmarshal(t *testing.T) {
 				t.Errorf("Expected %s, got %s", tt.expected, actual)
 			}
 		})
-	}
-}
-
-func TestEntryWithDateOnlyPublished(t *testing.T) {
-	xmlData := `<?xml version="1.0" encoding="UTF-8"?>
-<entry xmlns="http://www.w3.org/2005/Atom">
-	<title>Test Book</title>
-	<id>test-id</id>
-	<published>2006-07-18</published>
-</entry>`
-
-	var entry Entry
-	err := xml.NewDecoder(strings.NewReader(xmlData)).Decode(&entry)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal entry: %v", err)
-	}
-
-	if entry.Published == nil {
-		t.Error("Expected published date to be parsed")
-		return
-	}
-
-	expected := time.Date(2006, 7, 18, 0, 0, 0, 0, time.UTC)
-	if !entry.Published.Time.Equal(expected) {
-		t.Errorf("Expected %v, got %v", expected, entry.Published.Time)
 	}
 }

@@ -17,36 +17,57 @@ p {
   width: 100%;
 }
 
-#container>ul {
+#container > ul {
   margin-top: 75px;
   list-style-type: none;
 }
 
+#container > .entry-details {
+  margin-top: 75px;
+}
+
 @media (max-width: 500px) {
-  #container>ul {
+  #container > ul {
     margin-top: 125px;
   }
 }
 
-#container>ul>li {
+#container > ul > li {
   padding: 1rem;
   white-space: nowrap;
 }
 
-#container>ul>li>a>img {
+#container > ul > li > a > img {
   display: inline-block;
   height: 75px;
   margin-right: 1rem;
 }
 
-#container>ul>li>a>.info {
+#container > .entry-details > img {
+  display: inline-block;
+  margin-right: 1rem;
+  max-width: 200px;
+  /* height: auto; */
+}
+
+#container > ul > li > a > .info {
   display: inline-block;
   vertical-align: top;
   white-space: normal;
   max-width: calc(100% - 3rem - 75px);
 }
 
-.info>p:first-child {
+#container > .entry-details > .info {
+  display: inline-block;
+  vertical-align: top;
+  max-width: calc(100% - 1.5rem - 200px);
+}
+
+#container > .entry-details > .info > #summary {
+  margin-top: 0.5rem;
+  size: 1rem;
+}
+.info > p:first-child {
   font-weight: 500;
   font-size: 1.25rem;
 }
@@ -57,11 +78,11 @@ a {
   color: black;
 }
 
-#container>ul>li a {
+#container > ul > li a {
   width: 100%;
 }
 
-#container>ul>li:not(:last-child) {
+#container > ul > li:not(:last-child) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.5);
 }
 
@@ -94,7 +115,7 @@ a {
   height: 100%;
 }
 
-#search-form>label>input {
+#search-form > label > input {
   height: 100%;
   width: 100%;
   padding: 0.5rem;
@@ -104,17 +125,17 @@ a {
   padding-left: 3rem;
 }
 
-#search-form>label {
+#search-form > label {
   position: relative;
 }
-#search-form>label>svg {
+#search-form > label > svg {
   position: absolute;
   top: 25%;
   left: 0.5rem;
   height: 1rem;
 }
 
-.search>form {
+.search > form {
   padding-top: 1rem;
   padding-left: 1rem;
   display: block;
@@ -125,7 +146,7 @@ a {
   vertical-align: center;
 }
 
-.nav-controls>a {
+.nav-controls > a {
   padding: 1rem 0.5rem;
   height: 100%;
   font-size: 1rem;
