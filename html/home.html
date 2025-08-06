@@ -1,8 +1,12 @@
 {{define "content"}}
-<ul>
+<ul class="book-list">
   {{range .}}
-  <li class="link">
-    <a href="/feed?q={{.URL}}">{{.Title}}</a>
+  <li class="book-item">
+    <a href="/feed?q={{.URL}}">
+      <div class="book-info">
+        <p class="book-title">{{.Title}}</p>
+      </div>
+    </a>
   </li>
   {{end}}
 </ul>

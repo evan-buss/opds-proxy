@@ -14,29 +14,29 @@
   </div>
 </nav>
 
-<div class="entry-details">
+<div class="book-details">
   {{if .ImageURL}}
-  <img src="?q={{.ImageURL}}" alt="{{.Title}}" height="300" />
+  <img class="book-details-cover" src="?q={{.ImageURL}}" alt="{{.Title}}" height="300" />
   {{else if .ImageData}}
-  <img src="{{.ImageData}}" alt="{{.Title}}" height="300" />
+  <img class="book-details-cover" src="{{.ImageData}}" alt="{{.Title}}" height="300" />
   {{end}}
 
 
-  <div class="info">
+  <div class="book-details-info">
     <h1>{{.Title}}</h1>
     {{if .Author}}
     <h2>by {{.Author}}</h2>
     {{end}}
-    <div id="summary">{{.Content}}</div>
+    <div class="book-summary">{{.Content}}</div>
   </div>
 </div>
 
 <ul class="entry-links">
   {{range .Links}}
-  <li>
+  <li class="book-item">
     <a href="?q={{.Href}}">
-      <div class="info">
-        <p>{{.Title}}</p>
+      <div class="book-info">
+        <p class="book-title">{{.Title}}</p>
         <p class="link-type">{{.Subtext}}</p>
       </div>
     </a>

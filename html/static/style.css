@@ -1,160 +1,6 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-
-  font-family: serif, sans-serif;
-  font-style: italic;
-  font-size: 1.25rem;
-}
-
-p {
-  font-size: 1rem;
-}
-
-#container {
-  padding: 1rem;
-  width: 100%;
-}
-
-#container > ul {
-  margin-top: 75px;
-  list-style-type: none;
-}
-
-#container > .entry-details {
-  margin-top: 75px;
-}
-
-@media (max-width: 500px) {
-  #container > ul {
-    margin-top: 125px;
-  }
-}
-
-#container > ul > li {
-  padding: 1rem;
-  white-space: nowrap;
-}
-
-#container > ul > li > a > img {
-  display: inline-block;
-  height: 75px;
-  margin-right: 1rem;
-}
-
-#container > .entry-details > img {
-  display: inline-block;
-  margin-right: 1rem;
-  max-width: 200px;
-  /* height: auto; */
-}
-
-#container > ul > li > a > .info {
-  display: inline-block;
-  vertical-align: top;
-  white-space: normal;
-  max-width: calc(100% - 3rem - 75px);
-}
-
-#container > .entry-details > .info {
-  display: inline-block;
-  vertical-align: top;
-  max-width: calc(100% - 1.5rem - 200px);
-}
-
-#container > .entry-details > .info > #summary {
-  margin-top: 0.5rem;
-  size: 1rem;
-}
-.info > p:first-child {
-  font-weight: 500;
-  font-size: 1.25rem;
-}
-
-a {
-  display: inline-block;
-  text-decoration: none;
-  color: black;
-}
-
-#container > ul > li a {
-  width: 100%;
-}
-
-#container > ul > li:not(:last-child) {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
-}
-
-.navigation {
-  background-color: white;
-
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-
-  display: block;
-
-  height: 64px;
-
-  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
-}
-
-.search {
-  width: 100px;
-}
-
-.search:focus {
-  outline: none;
-  box-shadow: none;
-}
-
-#search-form {
-  display: inline-block;
-  height: 100%;
-}
-
-#search-form > label > input {
-  height: 100%;
-  width: 100%;
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: none;
-  border-right: 1px solid rgba(0, 0, 0, 0.5);
-  padding-left: 3rem;
-}
-
-#search-form > label {
-  position: relative;
-}
-#search-form > label > svg {
-  position: absolute;
-  top: 25%;
-  left: 0.5rem;
-  height: 1rem;
-}
-
-.search > form {
-  padding-top: 1rem;
-  padding-left: 1rem;
-  display: block;
-}
-
-.nav-controls {
-  float: right;
-  vertical-align: center;
-}
-
-.nav-controls > a {
-  padding: 1rem 0.5rem;
-  height: 100%;
-  font-size: 1rem;
-}
-
-.nav-controls:last-child {
-  padding-right: 1rem;
-}
+/* =============================================================================
+   RESET & BASE STYLES
+   ============================================================================= */
 
 *,
 *::before,
@@ -164,10 +10,31 @@ a {
 
 * {
   margin: 0;
+  padding: 0;
+  font-family: serif, sans-serif;
+  font-style: italic;
+  font-size: 1.25rem;
 }
 
-body {
-  /* -webkit-font-smoothing: antialiased; */
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+p {
+  font-size: 1rem;
+}
+
+a {
+  display: inline-block;
+  text-decoration: none;
+  color: black;
 }
 
 img,
@@ -186,12 +53,172 @@ select {
   font: inherit;
 }
 
-p,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  overflow-wrap: break-word;
+/* =============================================================================
+   LAYOUT
+   ============================================================================= */
+
+.container {
+  padding: 1rem;
+  width: 100%;
+}
+
+/* =============================================================================
+   NAVIGATION
+   ============================================================================= */
+
+.navigation {
+  background-color: white;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: block;
+  height: 64px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.nav-controls {
+  float: right;
+  vertical-align: center;
+}
+
+.nav-controls > a {
+  padding: 1rem 0.5rem;
+  height: 100%;
+  font-size: 1rem;
+}
+
+.nav-controls:last-child {
+  padding-right: 1rem;
+}
+
+/* =============================================================================
+   SEARCH
+   ============================================================================= */
+
+.search-form {
+  display: inline-block;
+  height: 100%;
+}
+
+.search-form > label {
+  position: relative;
+}
+
+.search-input {
+  height: 100%;
+  width: 100px;
+  padding: 0.5rem 0.5rem 0.5rem 3rem;
+  font-size: 1rem;
+  border: none;
+  border-right: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.search-form > label > .search-input {
+  width: 100%;
+}
+
+.search-form > label > svg {
+  position: absolute;
+  top: 25%;
+  left: 0.5rem;
+  height: 1rem;
+}
+
+.search-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.search > form {
+  padding: 1rem 0 0 1rem;
+  display: block;
+}
+
+/* =============================================================================
+   BOOK LIST
+   ============================================================================= */
+
+.book-list {
+  margin-top: 75px;
+  list-style-type: none;
+}
+
+.book-item {
+  padding: 1rem;
+  white-space: nowrap;
+}
+
+.book-item a {
+  width: 100%;
+}
+
+.book-list .book-item:not(:last-child),
+.entry-links .book-item:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.book-cover {
+  display: inline-block;
+  height: 75px;
+  margin-right: 1rem;
+}
+
+.book-info {
+  display: inline-block;
+  vertical-align: top;
+  white-space: normal;
+  max-width: calc(100% - 3rem - 75px);
+}
+
+.book-title {
+  font-weight: 500;
+  font-size: 1.25rem;
+}
+
+/* =============================================================================
+   BOOK DETAILS PAGE
+   ============================================================================= */
+
+.book-details,
+.entry-links {
+  margin-top: 75px;
+}
+
+.entry-links {
+  list-style-type: none;
+}
+
+.book-details-cover {
+  display: inline-block;
+  margin-right: 1rem;
+  max-width: 200px;
+}
+
+.book-details-info {
+  display: inline-block;
+  vertical-align: top;
+  max-width: calc(100% - 1.5rem - 200px);
+}
+
+.book-summary {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+.link-type {
+  font-style: normal;
+  color: #666;
+}
+
+/* =============================================================================
+   MEDIA QUERIES
+   ============================================================================= */
+
+@media (max-width: 500px) {
+  .book-list,
+  .book-details,
+  .entry-links {
+    margin-top: 125px;
+  }
 }
