@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/evan-buss/opds-proxy/internal/formats"
 )
 
 type MobiConverter struct {
@@ -23,6 +25,10 @@ func (mc *MobiConverter) Available() bool {
 	return mc.available
 }
 
+func (mc *MobiConverter) HandlesInputFormat(format formats.Format) bool {
+	return format == formats.EPUB
+}
+
 func (mc *MobiConverter) Convert(log *slog.Logger, input string) (string, error) {
 	mc.mutex.Lock()
 	defer mc.mutex.Unlock()
@@ -30,7 +36,7 @@ func (mc *MobiConverter) Convert(log *slog.Logger, input string) (string, error)
 	// KindleGen doesn't allow the input file to be in a different directory
 	// So set the working directory to the input file.
 	outDir, _ := filepath.Abs(filepath.Dir(input))
-	mobiFile := filepath.Join(outDir, strings.Replace(filepath.Base(input), ".epub", ".mobi", 1))
+	mobiFile := filepath.Join(outDir, strings.Replace(filepath.Base(input), formats.EPUB.Extension, formats.MOBI.Extension, 1))
 
 	// And remove the directory from file paths
 	cmd := exec.Command("kindlegen",

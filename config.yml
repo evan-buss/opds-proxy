@@ -1,5 +1,6 @@
+debug: true
 feeds:
-  - name: "Evan's Library"
-    url: "http://calibre.terminus/opds"
   - name: "Project Gutenberg"
-    url: "http://gutenberg.org/opds"
+    url: "https://www.gutenberg.org/ebooks/search.opds/"
+  - name: "Anarchist Library"
+    url: "https://theanarchistlibrary.org/opds"

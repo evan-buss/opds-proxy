@@ -16,9 +16,11 @@
 <ul>
   {{range .Links}}
   <li class="link">
-    <a href="?q={{.Href}}">
+    <a href="?q={{.Href}}{{if not (empty .EntryID)}}&id={{.EntryID}}{{end}}">
       {{if .ImageURL}}
       <img src="?q={{.ImageURL}}" alt="{{.Title}}" height="40" />
+      {{else if .ImageData}}
+      <img src="{{.ImageData}}" alt="{{.Title}}" height="40" />
       {{end}}
       <div class="info">
         <p>{{.Title}}</p>
