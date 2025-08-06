@@ -13,17 +13,17 @@
   </div>
 </nav>
 
-<ul>
+<ul class="book-list">
   {{range .Links}}
-  <li class="link">
+  <li class="book-item">
     <a href="?q={{.Href}}{{if not (empty .EntryID)}}&id={{.EntryID}}{{end}}">
       {{if .ImageURL}}
-      <img src="?q={{.ImageURL}}" alt="{{.Title}}" height="40" />
+      <img class="book-cover" src="?q={{.ImageURL}}" alt="{{.Title}}" height="40" />
       {{else if .ImageData}}
-      <img src="{{.ImageData}}" alt="{{.Title}}" height="40" />
+      <img class="book-cover" src="{{.ImageData}}" alt="{{.Title}}" height="40" />
       {{end}}
-      <div class="info">
-        <p>{{.Title}}</p>
+      <div class="book-info">
+        <p class="book-title">{{.Title}}</p>
         {{if empty .Author | not }}
         <p>{{.Author}}</p>
         {{end}}
