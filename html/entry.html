@@ -31,16 +31,39 @@
   </div>
 </div>
 
-<ul class="entry-links">
-  {{range .Links}}
-  <li class="book-item">
-    <a href="?q={{.Href}}">
-      <div class="book-info">
-        <p class="book-title">{{.Title}}</p>
-        <p class="link-type">{{.Subtext}}</p>
-      </div>
-    </a>
-  </li>
-  {{end}}
-</ul>
+{{if .DownloadLinks}}
+<div class="entry-section">
+  <h3>Downloads</h3>
+  <ul class="entry-links">
+    {{range .DownloadLinks}}
+    <li class="book-item">
+      <a href="?q={{.Href}}">
+        <div class="book-info">
+          <p class="book-title">{{.Title}}</p>
+          <p class="link-type">{{.Subtext}}</p>
+        </div>
+      </a>
+    </li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
+
+{{if .NavigationLinks}}
+<div class="entry-section">
+  <h3>Related Links</h3>
+  <ul class="entry-links">
+    {{range .NavigationLinks}}
+    <li class="book-item">
+      <a href="?q={{.Href}}">
+        <div class="book-info">
+          <p class="book-title">{{.Title}}</p>
+          <p class="link-type">{{.Subtext}}</p>
+        </div>
+      </a>
+    </li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
 {{end}}

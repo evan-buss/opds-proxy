@@ -1,7 +1,6 @@
 package html
 
 import (
-	"fmt"
 	"html"
 	"html/template"
 	"regexp"
@@ -48,15 +47,16 @@ func truncateSummary(htmlText string, maxLength int) string {
 
 // EntryViewModel is the data passed to the entry.html template.
 type EntryViewModel struct {
-	Title     string
-	Author    string
-	Content   template.HTML
-	Links     []EntryLinkViewModel
-	FeedURL   string
-	ImageURL  string
-	ImageData template.URL
-	Search     string
-	Navigation []NavigationViewModel
+	Title           string
+	Author          string
+	Content         template.HTML
+	DownloadLinks   []EntryLinkViewModel
+	NavigationLinks []EntryLinkViewModel
+	FeedURL         string
+	ImageURL        string
+	ImageData       template.URL
+	Search          string
+	Navigation      []NavigationViewModel
 }
 
 // EntryLinkViewModel is a single link in the entry.html template.
@@ -70,15 +70,16 @@ type EntryLinkViewModel struct {
 func constructEntryVM(params EntryParams) EntryViewModel {
 	// Extract navigation data using shared function from feed.go
 	navData := extractNavigationData(params.Feed, params.URL)
-	
+
 	vm := EntryViewModel{
-		Title:      params.Entry.Title,
-		Links:      []EntryLinkViewModel{},
-		FeedURL:    params.URL,
-		Content:    template.HTML(truncateSummary(params.Entry.SummaryText(), maxSummaryLength)),
-		Author:     strings.Join(params.Entry.AuthorNames(), " & "),
-		Search:     navData.Search,
-		Navigation: navData.Navigation,
+		Title:           params.Entry.Title,
+		DownloadLinks:   []EntryLinkViewModel{},
+		NavigationLinks: []EntryLinkViewModel{},
+		FeedURL:         params.URL,
+		Content:         template.HTML(truncateSummary(params.Entry.SummaryText(), maxSummaryLength)),
+		Author:          strings.Join(params.Entry.AuthorNames(), " & "),
+		Search:          navData.Search,
+		Navigation:      navData.Navigation,
 		// ImageURL: resolveHref(params.URL, params.Entry.Image()),
 	}
 
@@ -94,7 +95,7 @@ func constructEntryVM(params EntryParams) EntryViewModel {
 	links := params.Entry.GetLinks()
 
 	for _, link := range links.Navigation() {
-		vm.Links = append(vm.Links, EntryLinkViewModel{
+		vm.NavigationLinks = append(vm.NavigationLinks, EntryLinkViewModel{
 			Title:    link.Title,
 			Href:     resolveHref(params.URL, link.Href),
 			TypeLink: link.TypeLink,
@@ -102,8 +103,6 @@ func constructEntryVM(params EntryParams) EntryViewModel {
 	}
 
 	for _, link := range links.Downloads() {
-		fmt.Println("DOWNLOADING LINK")
-		
 		// Use link's title if present, otherwise generate custom title
 		var title string
 		if link.Title != "" {
@@ -111,14 +110,14 @@ func constructEntryVM(params EntryParams) EntryViewModel {
 		} else {
 			title = formats.GetMimeTypeLabel(link.TypeLink) + " Format"
 		}
-		
+
 		if link.TypeLink == params.DeviceType.GetPreferredFormat().MimeType {
 			title += " (Recommended)"
 		}
 
 		format, exists := formats.FormatByMimeType(link.TypeLink)
 		if !exists {
-			vm.Links = append(vm.Links, EntryLinkViewModel{
+			vm.DownloadLinks = append(vm.DownloadLinks, EntryLinkViewModel{
 				Title:    title,
 				Href:     resolveHref(params.URL, link.Href),
 				TypeLink: link.TypeLink,
@@ -132,7 +131,7 @@ func constructEntryVM(params EntryParams) EntryViewModel {
 			subtext += "Automatically converted to " + params.DeviceType.GetPreferredFormat().Label + ". "
 		}
 
-		vm.Links = append(vm.Links, EntryLinkViewModel{
+		vm.DownloadLinks = append(vm.DownloadLinks, EntryLinkViewModel{
 			Title:    title,
 			Href:     resolveHref(params.URL, link.Href),
 			TypeLink: link.TypeLink,

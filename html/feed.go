@@ -49,6 +49,7 @@ func extractNavigationData(feed *opds.Feed, baseURL string) NavigationData {
 
 	return nav
 }
+
 type NavigationViewModel struct {
 	Href  string
 	Label string
@@ -67,7 +68,7 @@ type LinkViewModel struct {
 func convertFeed(p *FeedParams) FeedViewModel {
 	// Extract navigation data using shared function
 	navData := extractNavigationData(p.Feed, p.URL)
-	
+
 	vm := FeedViewModel{
 		Title:      p.Feed.Title,
 		Search:     navData.Search,
