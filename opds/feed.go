@@ -1,20 +1,20 @@
 package opds
 
 // OPDS navigation feed type constant
-const NavigationFeedType string = "application/atom+xml;type=feed;profile=opds-catalog"
+const NavigationFeedType string = "application/atom+xml;profile=opds-catalog"
 
 // OPDS acquisition constant
 const AcquisitionFeedRel string = "http://opds-spec.org/acquisition"
 
 // Feed represents the root element for acquisition or navigation feeds
 type Feed struct {
-	ID           string       `xml:"id"`
-	Title        string       `xml:"title"`
-	Updated      Time `xml:"updated"`
-	Entries      []Entry      `xml:"entry"`
-	Links        []Link       `xml:"link"`
-	TotalResults int          `xml:"totalResults"`
-	ItemsPerPage int          `xml:"itemsPerPage"`
+	ID           string  `xml:"id"`
+	Title        string  `xml:"title"`
+	Updated      Time    `xml:"updated"`
+	Entries      []Entry `xml:"entry"`
+	Links        []Link  `xml:"link"`
+	TotalResults int     `xml:"totalResults"`
+	ItemsPerPage int     `xml:"itemsPerPage"`
 }
 
 // GetLinks returns the links as a fluent Links type for filtering

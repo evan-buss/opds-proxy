@@ -16,7 +16,6 @@
   font-size: 1.25rem;
 }
 
-
 p,
 h1,
 h2,
@@ -209,6 +208,21 @@ select {
 .link-type {
   font-style: normal;
   color: #666;
+}
+
+.entry-section {
+  margin-top: 1rem;
+}
+
+.entry-section h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.entry-section .entry-links {
+  margin-top: 0;
 }
 
 /* =============================================================================
