@@ -1,7 +1,7 @@
 package opds
 
 // OPDS navigation feed type constant
-const NavigationFeedType string = "application/atom+xml;profile=opds-catalog"
+const NavigationFeedType string = "profile=opds-catalog"
 
 // OPDS acquisition constant
 const AcquisitionFeedRel string = "http://opds-spec.org/acquisition"
@@ -26,7 +26,7 @@ func (f Feed) GetLinks() Links {
 func (f *Feed) IsAcquisitionFeed() bool {
 	for _, entry := range f.Entries {
 		acquisitionFeeds := entry.GetLinks().Where(func(link Link) bool {
-			return link.Rel == AcquisitionFeedRel
+			return link.IsDownload()
 		})
 
 		if len(acquisitionFeeds) > 0 {
@@ -41,7 +41,7 @@ func (f *Feed) IsAcquisitionFeed() bool {
 func (f *Feed) IsNavigationFeed() bool {
 	for _, entry := range f.Entries {
 		navigationLinks := entry.GetLinks().Where(func(link Link) bool {
-			return link.TypeLink == NavigationFeedType
+			return link.IsNavigation()
 		})
 
 		if len(navigationLinks) > 0 {
