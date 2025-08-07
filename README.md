@@ -1,7 +1,7 @@
 # OPDS Proxy
 
-OPDS Proxy provides a minimal web interface over XML-based OPDS feeds. 
-Your eReader likely does not support OPDS, but it does have a rudimentary web browser. 
+OPDS Proxy provides a minimal web interface over XML-based OPDS feeds.
+Your eReader likely does not support OPDS, but it does have a rudimentary web browser.
 By running your own OPDS Proxy you can allow eReaders to navigate and download books from your library and any OPDS feed without installing custom eReader software.
 
 <p align="center">
@@ -9,14 +9,14 @@ By running your own OPDS Proxy you can allow eReaders to navigate and download b
 </p>
 
 ## Features
+
 - Minimal web interface that works on any web browser
 - Multiple OPDS feeds
 - Automatically converts your `.epub` files into the proprietary format your eReader requires.
-    - Kobo: `*.epub` to `*.kepub` (see [benefits](https://www.reddit.com/r/kobo/comments/vz3nx6/kepub_vs_epub/))
-    - Kindle:  `*.epub` to `*.mobi`
-    - Other: `*.epub`
-- Allows accessing HTTP basic auth OPDS feeds from primitive eReader browsers that don't natively support basic auth. 
-
+  - Kobo: `*.epub` to `*.kepub` (see [benefits](https://www.reddit.com/r/kobo/comments/vz3nx6/kepub_vs_epub/))
+  - Kindle:  `*.epub` to `*.mobi`
+  - Other: `*.epub`
+- Allows accessing HTTP basic auth OPDS feeds from primitive eReader browsers that don't natively support basic auth.
 
 ## Getting Started
 
@@ -24,7 +24,7 @@ You can run OPDS Proxy as a Docker container or as an executable.
 
 Configuration is done via YAML file (default `config.yml`), environment variables, and command flags in that order of precedence.
 
-### Docker 
+### Docker
 
 Docker images are published to [Docker Hub](https://hub.docker.com/r/evanbuss/opds-proxy) and the [GitHub Container Registry](https://github.com/evan-buss/opds-proxy/pkgs/container/opds-proxy).
 
@@ -48,6 +48,7 @@ services:
       - ./config.yml:/config.yml
     restart: unless-stopped
 ```
+
 ### Executable
 
 See the [releases](https://github.com/evan-buss/opds-proxy/releases) page for the latest release.
@@ -65,10 +66,9 @@ See the [releases](https://github.com/evan-buss/opds-proxy/releases) page for th
 ./opds-proxy --port 5228 --config ~/.config/opds-proxy-config.yml
 ```
 
-
 ### Configuration Format
 
-Most settings are defined in a `config.yml`. 
+Most settings are defined in a `config.yml`.
 
 ```yml
 # Optional port to listen on (default 8080)
@@ -112,19 +112,21 @@ opds-proxy --generate-keys
 opds-proxy --config ~/.config/opds-proxy-config.yml 
 ```
 
-
 ## Motivation
+
 KOReader is great and I've been running it for years on my jailbroken Kindle and Kobo eReaders.
 To me, the standout feature is its ability to speak OPDS which allows myself / family / friends to have access to my library from anywhere.
 That being said, the Kindle / Kobo native reader software is faster, better looking, has a lower learning curve, and doesn't require a complicated installation process that oftens breaks on device updates.
 
 ## My Setup
+
 - All books are stored and managed via Calibre (Docker) in standard `.epub` format.
 - Calibre's OPDS feed is turned on but not exposed to the outside world.
 - OPDS Proxy is pointed to the Calibre OPDS feed.
 - eReaders access OPDS Proxy via web browser. Book files are automatically converted to device-specific proprietary format on download.
 
 ### Why Not Use An Existing Solution?
+
 - Calibre
   - Good for metadata management but not for the web interface.
   - Doesn't support Kobo `.kepub` files natively without installing multiple plugins.
@@ -143,11 +145,12 @@ That being said, the Kindle / Kobo native reader software is faster, better look
 - send.djazz.se/
   - Requires uploading private content to unknown server
   - Only supports 1 book at a time
-  - Doesn't connect to your existing library 
+  - Doesn't connect to your existing library
   - Single User
     - Can't share library with friends / family
 
 ## Known Issues
+
 Tested and confirmed working with Calibre's OPDS Feed. Any others may have issues. Please submit issues for any bugs you encounter.
 
 ### Browser Quirks
@@ -155,6 +158,7 @@ Tested and confirmed working with Calibre's OPDS Feed. Any others may have issue
 eReader browsers are extremely basic and outdated.
 
 Kobo Browser:
+
 - Basic Authentication not supported.
 - Cookies are cleared when browser is closed so you have to log in every time.
 - Cookies don't support `secure` or `httponly`. They just silently fail to be saved.

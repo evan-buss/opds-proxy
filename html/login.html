@@ -1,5 +1,5 @@
 {{define "title"}}Feed Log In{{end}}
-{{ define "content" }}
+{{ define "main" }}
 <h1>{{urlParse .ReturnURL | getKey "query" | trimPrefix "q=" | urlParse | getKey "host" }}</h1>
 <p>Log in to access this feed.</p>
 <div id="content">

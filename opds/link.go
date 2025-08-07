@@ -59,7 +59,7 @@ func (l Link) IsDataImage() bool {
 
 // IsNavigation checks if the link is a navigation link
 func (l Link) IsNavigation() bool {
-	return l.TypeLink == NavigationFeedType || l.Rel == "subsection"
+	return strings.Contains(l.TypeLink, NavigationFeedType) || l.Rel == "subsection"
 }
 
 // IsThumbnail checks if the link is specifically a thumbnail image

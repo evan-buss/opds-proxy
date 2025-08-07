@@ -1,5 +1,5 @@
-{{define "title"}}{{.Title}}{{end}} {{define "content"}}
-
+{{define "title"}}{{.Title}}{{end}}
+{{define "nav"}}
 <nav class="navigation">
   {{if .Search }}
   {{template "search" .}}
@@ -12,7 +12,12 @@
     {{end}}
   </div>
 </nav>
+{{end}}
 
+{{define "main"}}
+{{if .Title}}
+<h1>{{.Title}}</h1>
+{{end}}
 <ul class="book-list">
   {{range .Links}}
   <li class="book-item">
@@ -32,5 +37,4 @@
   </li>
   {{end}}
 </ul>
-
 {{end}}

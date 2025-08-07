@@ -1,5 +1,5 @@
-{{define "title"}}{{.Title}}{{end}} {{define "content"}}
-
+{{define "title"}}{{.Title}}{{end}}
+{{define "nav"}}
 <nav class="navigation">
   {{if .Search }}
   {{template "search" .}}
@@ -7,13 +7,14 @@
 
   <div class="nav-controls">
     <a tabindex="-1" href="/">Home</a>
-    <a tabindex="-1" href="?q={{.FeedURL}}">Back</a>
     {{range .Navigation}}
     <a tabindex="-1" href="?q={{.Href}}">{{.Label}}</a>
     {{end}}
   </div>
 </nav>
+{{end}}
 
+{{define "main"}}
 <div class="book-details">
   {{if .ImageURL}}
   <img class="book-details-cover" src="?q={{.ImageURL}}" alt="{{.Title}}" height="300" />

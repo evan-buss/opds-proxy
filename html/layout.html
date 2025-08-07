@@ -9,7 +9,10 @@
 </head>
 
 <body>
-  <main class="container" id="container">{{block "content" .}}{{end}}</main>
+  {{block "nav" .}}{{end}}
+  <main class="container">
+    {{block "main" .}}{{end}}
+  </main>
 </body>
 
 </html>

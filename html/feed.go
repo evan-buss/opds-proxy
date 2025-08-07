@@ -41,6 +41,11 @@ func extractNavigationData(feed *opds.Feed, baseURL string) NavigationData {
 
 	// Extract navigation links
 	for _, link := range links.Navigation() {
+		if link.Rel == "self" || // self link
+			strings.Contains(link.Rel, "http") { // opds sort links
+			continue // skip to save screen space
+		}
+
 		nav.Navigation = append(nav.Navigation, NavigationViewModel{
 			Href:  resolveHref(baseURL, link.Href),
 			Label: strings.ToUpper(link.Rel[:1]) + link.Rel[1:],
