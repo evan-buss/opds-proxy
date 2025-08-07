@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -267,9 +268,12 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 
 		log := r.Context().Value(requestLogger).(*slog.Logger)
 		filename, err := parseFileName(resp)
-		if err == nil {
-			log = log.With(slog.String("file", filename))
+		if err != nil {
+			handleError(r, w, "Failed to parse file name", err)
+			return
 		}
+
+		log = log.With(slog.String("file", filename))
 
 		converter := converterManager.GetConverterForDevice(deviceType, format)
 
@@ -278,11 +282,6 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 			if filename != "" {
 				log.Info("Sent File")
 			}
-			return
-		}
-
-		if err != nil {
-			handleError(r, w, "Failed to parse file name", err)
 			return
 		}
 
@@ -444,11 +443,16 @@ func downloadFile(path string, resp *http.Response) error {
 func parseFileName(resp *http.Response) (string, error) {
 	contentDisposition := resp.Header.Get("Content-Disposition")
 	_, params, err := mime.ParseMediaType(contentDisposition)
-	if err != nil {
-		return "", err
+	if err == nil && params["filename"] != "" {
+		return params["filename"], nil
 	}
 
-	return params["filename"], nil
+	// Fallback to using the last part of the URL as the filename
+	if parsedUrl, err := url.Parse(resp.Request.URL.String()); err == nil {
+		return path.Base(parsedUrl.Path), nil
+	}
+
+	return "", err
 }
 
 func forwardResponse(w http.ResponseWriter, resp *http.Response) {
