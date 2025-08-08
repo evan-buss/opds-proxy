@@ -95,8 +95,6 @@ select {
 .search-form {
   display: inline-block;
   height: 64px;
-  /* Kobo doesn't render nav border under search section without this */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
 }
 
 .search-form > label {
