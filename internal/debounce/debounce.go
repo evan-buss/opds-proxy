@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/evan-buss/opds-proxy/internal/cache"
+	"github.com/evan-buss/opds-proxy/internal/httpx"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -25,7 +26,7 @@ func NewDebounceMiddleware(debounce time.Duration) func(next http.HandlerFunc) h
 
 			if entry, exists := responseCache.Get(key); exists {
 				w.Header().Set("X-Debounce", "true")
-				writeResponse(entry, w)
+				httpx.WriteRecorder(entry, w)
 				return
 			}
 
@@ -39,15 +40,7 @@ func NewDebounceMiddleware(debounce time.Duration) func(next http.HandlerFunc) h
 			responseCache.Set(key, recorder)
 
 			w.Header().Set("X-Shared", strconv.FormatBool(shared))
-			writeResponse(recorder, w)
+			httpx.WriteRecorder(recorder, w)
 		}
 	}
-}
-
-func writeResponse(rec *httptest.ResponseRecorder, w http.ResponseWriter) {
-	for k, v := range rec.Header() {
-		w.Header()[k] = v
-	}
-	w.WriteHeader(rec.Code)
-	w.Write(rec.Body.Bytes())
 }
