@@ -185,7 +185,14 @@ func handleFeed(outputDir string, feeds []FeedConfig, s *securecookie.SecureCook
 
 		searchTerm := r.URL.Query().Get("search")
 		if searchTerm != "" {
-			queryURL = strings.Replace(queryURL, "{searchTerms}", searchTerm, 1)
+			escaped := url.QueryEscape(searchTerm)
+			repl := strings.NewReplacer("{searchTerms}", escaped, "{searchTerms?}", escaped)
+
+			if strings.Contains(queryURL, "{searchTerms") {
+				queryURL = repl.Replace(queryURL)
+			} else if tmpl, err := opds.ResolveOpenSearchTemplate(queryURL); err == nil && tmpl != "" {
+				queryURL = repl.Replace(tmpl)
+			}
 		}
 
 		resp, err := fetchFromUrl(queryURL, getCredentials(queryURL, r, feeds, s))
