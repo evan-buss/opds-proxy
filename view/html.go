@@ -78,7 +78,10 @@ type FeedParams struct {
 }
 
 func Feed(w io.Writer, p FeedParams) error {
-	vm := convertFeed(&p)
+	vm, err := convertFeed(&p)
+	if err != nil {
+		return err
+	}
 	return feed.Execute(w, vm)
 }
 
@@ -91,7 +94,10 @@ type EntryParams struct {
 }
 
 func Entry(w io.Writer, p EntryParams) error {
-	vm := constructEntryVM(p)
+	vm, err := constructEntryVM(p)
+	if err != nil {
+		return err
+	}
 	return entry.Execute(w, vm)
 }
 

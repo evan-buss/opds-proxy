@@ -1,10 +1,9 @@
 package view
 
 import (
+	"fmt"
 	"html/template"
-	"log/slog"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/evan-buss/opds-proxy/opds"
@@ -24,7 +23,7 @@ type NavigationData struct {
 }
 
 // extractNavigationData extracts navigation and search links from a feed
-func extractNavigationData(feed *opds.Feed, baseURL string) NavigationData {
+func extractNavigationData(feed *opds.Feed, baseURL string) (NavigationData, error) {
 	nav := NavigationData{
 		Search:     "",
 		Navigation: make([]NavigationViewModel, 0),
@@ -37,7 +36,11 @@ func extractNavigationData(feed *opds.Feed, baseURL string) NavigationData {
 		return link.Rel == "search"
 	})
 	if searchLink := searchLinks.First(); searchLink != nil {
-		nav.Search = resolveHref(baseURL, searchLink.Href)
+		search, err := resolveHref(baseURL, searchLink.Href)
+		if err != nil {
+			return NavigationData{}, fmt.Errorf("failed to resolve search link: %w", err)
+		}
+		nav.Search = search
 	}
 
 	// Extract navigation links
@@ -47,13 +50,17 @@ func extractNavigationData(feed *opds.Feed, baseURL string) NavigationData {
 			continue // skip to save screen space
 		}
 
+		href, err := resolveHref(baseURL, link.Href)
+		if err != nil {
+			return NavigationData{}, fmt.Errorf("failed to resolve navigation link: %w", err)
+		}
 		nav.Navigation = append(nav.Navigation, NavigationViewModel{
-			Href:  resolveHref(baseURL, link.Href),
+			Href:  href,
 			Label: strings.ToUpper(link.Rel[:1]) + link.Rel[1:],
 		})
 	}
 
-	return nav
+	return nav, nil
 }
 
 type NavigationViewModel struct {
@@ -71,9 +78,12 @@ type LinkViewModel struct {
 	EntryID   string
 }
 
-func convertFeed(p *FeedParams) FeedViewModel {
+func convertFeed(p *FeedParams) (FeedViewModel, error) {
 	// Extract navigation data using shared function
-	navData := extractNavigationData(p.Feed, p.URL)
+	navData, err := extractNavigationData(p.Feed, p.URL)
+	if err != nil {
+		return FeedViewModel{}, fmt.Errorf("failed to extract navigation data: %w", err)
+	}
 
 	vm := FeedViewModel{
 		Title:      p.Feed.Title,
@@ -83,13 +93,17 @@ func convertFeed(p *FeedParams) FeedViewModel {
 	}
 
 	for _, entry := range p.Feed.Entries {
-		vm.Links = append(vm.Links, constructLink(p.URL, entry))
+		link, err := constructLink(p.URL, entry)
+		if err != nil {
+			return FeedViewModel{}, fmt.Errorf("failed to construct link for entry %s: %w", entry.ID, err)
+		}
+		vm.Links = append(vm.Links, link)
 	}
 
-	return vm
+	return vm, nil
 }
 
-func constructLink(baseUrl string, entry opds.Entry) LinkViewModel {
+func constructLink(baseUrl string, entry opds.Entry) (LinkViewModel, error) {
 	vm := LinkViewModel{
 		Title:   entry.Title,
 		Content: entry.Content.Content,
@@ -106,7 +120,11 @@ func constructLink(baseUrl string, entry opds.Entry) LinkViewModel {
 
 	// If there is 1 link and it's a navigation link, don't link to the entry details page
 	if len(navLinks) == 1 {
-		vm.Href = url.QueryEscape(resolveHref(baseUrl, navLinks[0].Href))
+		href, err := resolveHref(baseUrl, navLinks[0].Href)
+		if err != nil {
+			return LinkViewModel{}, fmt.Errorf("failed to resolve navigation link: %w", err)
+		}
+		vm.Href = url.QueryEscape(href)
 		vm.EntryID = ""
 	} else {
 		// Otherwise, link to the entry details page
@@ -119,24 +137,26 @@ func constructLink(baseUrl string, entry opds.Entry) LinkViewModel {
 		if imageLink.IsDataImage() {
 			vm.ImageData = template.URL(imageLink.Href)
 		} else {
-			vm.ImageURL = resolveHref(baseUrl, imageLink.Href)
+			imageURL, err := resolveHref(baseUrl, imageLink.Href)
+			if err != nil {
+				return LinkViewModel{}, fmt.Errorf("failed to resolve image link: %w", err)
+			}
+			vm.ImageURL = imageURL
 		}
 	}
 
-	return vm
+	return vm, nil
 }
 
-func resolveHref(feedUrl string, relativePath string) string {
+func resolveHref(feedUrl string, relativePath string) (string, error) {
 	baseUrl, err := url.Parse(feedUrl)
 	if err != nil {
-		slog.Error("failed to parse feed URL", slog.Any("error", err), slog.String("url", feedUrl))
-		os.Exit(1)
+		return "", fmt.Errorf("failed to parse feed URL %q: %w", feedUrl, err)
 	}
 	relativeUrl, err := url.Parse(relativePath)
 	if err != nil {
-		slog.Error("failed to parse relative path", slog.Any("error", err), slog.String("path", relativePath))
-		os.Exit(1)
+		return "", fmt.Errorf("failed to parse relative path %q: %w", relativePath, err)
 	}
 
-	return baseUrl.ResolveReference(relativeUrl).String()
+	return baseUrl.ResolveReference(relativeUrl).String(), nil
 }
