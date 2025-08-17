@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -43,10 +42,6 @@ func NewServer(configData *ProxyConfig) (*Server, error) {
 	blockKey, err := hex.DecodeString(configData.Auth.BlockKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode block key: %w", err)
-	}
-
-	if !configData.DebugMode {
-		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	}
 
 	s := securecookie.New(hashKey, blockKey)
@@ -124,7 +119,7 @@ func requestMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 
-		log.Info("Request Completed",
+		log.Debug("Request Completed",
 			slog.String("duration", time.Since(start).String()),
 			slog.Bool("debounce", w.Header().Get("X-Debounce") == "true"),
 			slog.Bool("shared", w.Header().Get("X-Shared") == "true"),

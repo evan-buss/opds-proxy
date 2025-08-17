@@ -50,6 +50,7 @@ type FeedConfigAuth struct {
 
 func main() {
 	var k = koanf.New(".")
+	updateDefaultLogger(false) // Don't know if debug mode is enabled so using false
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	fs.StringP("port", "p", "8080", "port to listen on")
@@ -101,6 +102,10 @@ func main() {
 	config := ProxyConfig{}
 	k.Unmarshal("", &config)
 
+	if config.DebugMode {
+		updateDefaultLogger(true)
+	}
+
 	if config.Auth.HashKey == "" || config.Auth.BlockKey == "" {
 		slog.Info("Generating new cookie signing credentials")
 		hashKey, blockKey := displayKeys()
@@ -126,14 +131,28 @@ func main() {
 	}
 }
 
+func updateDefaultLogger(showDebug bool) {
+	logLevel := slog.LevelInfo
+	addSource := false
+
+	if showDebug {
+		logLevel = slog.LevelDebug
+		addSource = true
+	}
+
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel, AddSource: addSource})))
+}
+
 func displayKeys() (string, string) {
 	hashKey := hex.EncodeToString(securecookie.GenerateRandomKey(32))
 	blockKey := hex.EncodeToString(securecookie.GenerateRandomKey(32))
 
-	slog.Info("Set these values in your config file to persist authentication between server restarts")
-	fmt.Println("auth:")
-	fmt.Printf("  hash_key: %s\n", hashKey)
-	fmt.Printf("  block_key: %s\n", blockKey)
+	slog.Info("Set these values in the auth section of your config file to persist authentication between server restarts",
+		slog.Group("auth",
+			slog.String("hash_key", hashKey),
+			slog.String("block_key", blockKey),
+		),
+	)
 
 	return hashKey, blockKey
 }
