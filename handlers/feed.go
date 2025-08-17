@@ -27,14 +27,14 @@ import (
 
 type FeedHandler struct {
 	outputDir  string
-	feeds      []auth.FeedConfigLike
+	feeds      []auth.FeedConfig
 	s          *securecookie.SecureCookie
 	debug      bool
 	converters *convert.ConverterManager
 	mu         sync.Mutex
 }
 
-func Feed(outputDir string, feeds []auth.FeedConfigLike, s *securecookie.SecureCookie, debug bool) http.HandlerFunc {
+func Feed(outputDir string, feeds []auth.FeedConfig, s *securecookie.SecureCookie, debug bool) http.HandlerFunc {
 	h := &FeedHandler{
 		outputDir:  outputDir,
 		feeds:      feeds,

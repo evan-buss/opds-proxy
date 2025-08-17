@@ -14,7 +14,6 @@ import (
 
 	"github.com/evan-buss/opds-proxy/handlers"
 	"github.com/evan-buss/opds-proxy/internal/auth"
-	"github.com/evan-buss/opds-proxy/internal/config"
 	"github.com/evan-buss/opds-proxy/internal/debounce"
 	"github.com/evan-buss/opds-proxy/internal/formats"
 	"github.com/evan-buss/opds-proxy/internal/reqctx"
@@ -66,9 +65,9 @@ func NewServer(configData *ProxyConfig) (*Server, error) {
 	router.Handle("GET /{$}", requestMiddleware(handlers.Home(links)))
 
 	// Feed
-	adapted := make([]auth.FeedConfigLike, len(configData.Feeds))
+	adapted := make([]auth.FeedConfig, len(configData.Feeds))
 	for i, f := range configData.Feeds {
-		adapted[i] = config.FeedConfig{Name: f.Name, Url: f.Url, Auth: toConfigAuthPtr(f.Auth)}
+		adapted[i] = auth.FeedConfig{Name: f.Name, Url: f.Url, Auth: toAuthPtr(f.Auth)}
 	}
 	router.Handle("GET /feed", requestMiddleware(debounceMiddleware(handlers.Feed("tmp/", adapted, s, configData.DebugMode))))
 
@@ -81,11 +80,11 @@ func NewServer(configData *ProxyConfig) (*Server, error) {
 	return &Server{addr: ":" + configData.Port, router: router, s: s}, nil
 }
 
-func toConfigAuthPtr(a *FeedConfigAuth) *config.FeedAuth {
+func toAuthPtr(a *FeedConfigAuth) *auth.FeedAuth {
 	if a == nil {
 		return nil
 	}
-	return &config.FeedAuth{Username: a.Username, Password: a.Password, LocalOnly: a.LocalOnly}
+	return &auth.FeedAuth{Username: a.Username, Password: a.Password, LocalOnly: a.LocalOnly}
 }
 
 func requestMiddleware(next http.Handler) http.Handler {

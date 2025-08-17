@@ -15,7 +15,7 @@ type Credentials struct {
 
 const CookieName = "auth-creds"
 
-func GetCredentials(rawUrl string, req *http.Request, feeds []FeedConfigLike, s *securecookie.SecureCookie) *Credentials {
+func GetCredentials(rawUrl string, req *http.Request, feeds []FeedConfig, s *securecookie.SecureCookie) *Credentials {
 	requestUrl, err := url.Parse(rawUrl)
 	if err != nil {
 		return nil
@@ -23,7 +23,7 @@ func GetCredentials(rawUrl string, req *http.Request, feeds []FeedConfigLike, s 
 
 	// Try to get credentials from the config first
 	for _, feed := range feeds {
-		feedUrl, err := url.Parse(feed.GetURL())
+		feedUrl, err := url.Parse(feed.Url)
 		if err != nil {
 			continue
 		}
@@ -32,7 +32,7 @@ func GetCredentials(rawUrl string, req *http.Request, feeds []FeedConfigLike, s 
 			continue
 		}
 
-		cfg := feed.GetAuth()
+		cfg := feed.Auth
 		if cfg == nil || cfg.Username == "" || cfg.Password == "" {
 			continue
 		}
@@ -61,16 +61,14 @@ func GetCredentials(rawUrl string, req *http.Request, feeds []FeedConfigLike, s 
 	return value[requestUrl.Hostname()]
 }
 
-// FeedAuth mirrors config authentication for a feed
-// and is used by the FeedConfigLike adapter interface.
 type FeedAuth struct {
 	Username  string
 	Password  string
 	LocalOnly bool
 }
 
-type FeedConfigLike interface {
-	GetName() string
-	GetURL() string
-	GetAuth() *FeedAuth
+type FeedConfig struct {
+	Name string
+	Url  string
+	Auth *FeedAuth
 }
