@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -54,7 +55,7 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	resolvedURL, err := h.resolveQueryURL(queryURL, r.URL.Query().Get("search"))
 	if err != nil {
-		http.Error(w, "Failed to parse URL", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Failed to parse URL %q: %v", queryURL, err), http.StatusBadRequest)
 		return
 	}
 
@@ -65,7 +66,7 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 	if err != nil {
-		http.Error(w, "Failed to fetch", http.StatusBadGateway)
+		http.Error(w, fmt.Sprintf("Failed to fetch %q: %v", resolvedURL, err), http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
@@ -77,7 +78,8 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	mimeType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if err != nil {
-		http.Error(w, "Failed to parse content type", http.StatusBadGateway)
+		contentType := resp.Header.Get("Content-Type")
+		http.Error(w, fmt.Sprintf("Failed to parse content type %q: %v", contentType, err), http.StatusBadGateway)
 		return
 	}
 
@@ -104,7 +106,7 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *FeedHandler) resolveQueryURL(queryURL, searchTerm string) (string, error) {
 	parsed, err := url.QueryUnescape(queryURL)
 	if err != nil {
-		return queryURL, err
+		return queryURL, fmt.Errorf("failed to unescape query URL %q: %w", queryURL, err)
 	}
 	queryURL = parsed
 

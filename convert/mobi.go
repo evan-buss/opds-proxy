@@ -2,6 +2,7 @@ package convert
 
 import (
 	"bytes"
+	"fmt"
 	"log/slog"
 	"os/exec"
 	"path/filepath"
@@ -67,7 +68,7 @@ func (mc *MobiConverter) Convert(log *slog.Logger, input string) (string, error)
 				slog.String("stdout", out.String()),
 				slog.String("stderr", stderr.String()),
 			)
-			return "", err
+			return "", fmt.Errorf("kindlegen conversion failed for %q: %w", input, err)
 		}
 	}
 

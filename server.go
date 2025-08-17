@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"mime"
 	"net"
@@ -37,11 +38,11 @@ type Server struct {
 func NewServer(configData *ProxyConfig) (*Server, error) {
 	hashKey, err := hex.DecodeString(configData.Auth.HashKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode hash key: %w", err)
 	}
 	blockKey, err := hex.DecodeString(configData.Auth.BlockKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode block key: %w", err)
 	}
 
 	if !configData.DebugMode {

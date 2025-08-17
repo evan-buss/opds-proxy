@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -29,12 +30,13 @@ func Auth(s *securecookie.SecureCookie) http.HandlerFunc {
 
 			rUrl, err := url.Parse(returnUrl)
 			if err != nil {
-				http.Error(w, "Invalid return URL", http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("Invalid return URL %q: %v", returnUrl, err), http.StatusBadRequest)
 				return
 			}
-			domain, err := url.Parse(rUrl.Query().Get("q"))
+			site := rUrl.Query().Get("q")
+			domain, err := url.Parse(site)
 			if err != nil {
-				http.Error(w, "Invalid site", http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("Invalid site URL %q: %v", site, err), http.StatusBadRequest)
 				return
 			}
 
@@ -44,7 +46,7 @@ func Auth(s *securecookie.SecureCookie) http.HandlerFunc {
 
 			encoded, err := s.Encode(auth.CookieName, value)
 			if err != nil {
-				http.Error(w, "Failed to encode credentials", http.StatusInternalServerError)
+				http.Error(w, fmt.Sprintf("Failed to encode credentials: %v", err), http.StatusInternalServerError)
 				return
 			}
 			cookie := &http.Cookie{

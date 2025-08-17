@@ -27,7 +27,7 @@ func Fetch(url string, timeoutSeconds int, setAuth func(*http.Request)) (*http.R
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request for %q: %w", url, err)
 	}
 	if setAuth != nil {
 		setAuth(req)
@@ -49,24 +49,27 @@ func ParseFilename(resp *http.Response) (string, error) {
 	if parsedUrl, err := url.Parse(resp.Request.URL.String()); err == nil {
 		return path.Base(parsedUrl.Path), nil
 	}
-	return "", err
+	return "", fmt.Errorf("failed to parse URL %q: %w", resp.Request.URL.String(), err)
 }
 
 func DownloadToFile(dstPath string, resp *http.Response) error {
 	file, err := os.Create(dstPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create file %q: %w", dstPath, err)
 	}
 	defer file.Close()
 	_, err = io.Copy(file, resp.Body)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to download to file %q: %w", dstPath, err)
+	}
+	return nil
 }
 
 func SendFile(w http.ResponseWriter, filePath, outFilename string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		os.Remove(filePath)
-		return err
+		return fmt.Errorf("failed to open file %q: %w", filePath, err)
 	}
 	defer func() {
 		file.Close()
@@ -75,7 +78,7 @@ func SendFile(w http.ResponseWriter, filePath, outFilename string) error {
 
 	info, err := file.Stat()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to stat file %q: %w", filePath, err)
 	}
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", info.Size()))
@@ -89,7 +92,7 @@ func SendFile(w http.ResponseWriter, filePath, outFilename string) error {
 
 	_, err = io.Copy(w, file)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send file %q: %w", filePath, err)
 	}
 	return nil
 }
