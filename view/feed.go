@@ -2,8 +2,9 @@ package view
 
 import (
 	"html/template"
-	"log"
+	"log/slog"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/evan-buss/opds-proxy/opds"
@@ -128,11 +129,13 @@ func constructLink(baseUrl string, entry opds.Entry) LinkViewModel {
 func resolveHref(feedUrl string, relativePath string) string {
 	baseUrl, err := url.Parse(feedUrl)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to parse feed URL", slog.Any("error", err), slog.String("url", feedUrl))
+		os.Exit(1)
 	}
 	relativeUrl, err := url.Parse(relativePath)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to parse relative path", slog.Any("error", err), slog.String("path", relativePath))
+		os.Exit(1)
 	}
 
 	return baseUrl.ResolveReference(relativeUrl).String()
