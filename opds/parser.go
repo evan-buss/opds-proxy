@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,9 +37,9 @@ func ParseFeed(r io.Reader, debug bool) (*Feed, error) {
 
 	err = os.WriteFile(filepath, body, 0644)
 	if err != nil {
-		log.Printf("Failed to write raw OPDS feed to file: %v", err)
+		slog.Error("Failed to write raw OPDS feed to file", slog.Any("error", err))
 	} else {
-		log.Printf("Raw OPDS feed written to: %s", filepath)
+		slog.Debug("Raw OPDS feed written to file", slog.String("filepath", filepath))
 	}
 
 	err = xml.NewDecoder(strings.NewReader(string(body))).Decode(&feed)

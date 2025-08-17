@@ -1,0 +1,68 @@
+package handlers
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+
+	"github.com/evan-buss/opds-proxy/internal/auth"
+	"github.com/evan-buss/opds-proxy/view"
+	"github.com/gorilla/securecookie"
+)
+
+func Auth(s *securecookie.SecureCookie) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		returnUrl := r.URL.Query().Get("return")
+		if returnUrl == "" {
+			http.Error(w, "No return URL specified", http.StatusBadRequest)
+			return
+		}
+
+		if r.Method == "GET" {
+			view.Render(w, func(buf io.Writer) error { return view.Login(buf, view.LoginParams{ReturnURL: returnUrl}) })
+			return
+		}
+
+		if r.Method == "POST" {
+			username := r.FormValue("username")
+			password := r.FormValue("password")
+
+			rUrl, err := url.Parse(returnUrl)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Invalid return URL %q: %v", returnUrl, err), http.StatusBadRequest)
+				return
+			}
+			site := rUrl.Query().Get("q")
+			domain, err := url.Parse(site)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Invalid site URL %q: %v", site, err), http.StatusBadRequest)
+				return
+			}
+
+			value := map[string]auth.Credentials{
+				domain.Hostname(): {Username: username, Password: password},
+			}
+
+			encoded, err := s.Encode(auth.CookieName, value)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to encode credentials: %v", err), http.StatusInternalServerError)
+				return
+			}
+			cookie := &http.Cookie{
+				Name:  auth.CookieName,
+				Value: encoded,
+				Path:  "/",
+				// Kobo fails to set cookies with HttpOnly or Secure flags
+				Secure:   false,
+				HttpOnly: false,
+			}
+
+			http.SetCookie(w, cookie)
+			http.Redirect(w, r, returnUrl, http.StatusFound)
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}

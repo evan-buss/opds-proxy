@@ -35,7 +35,7 @@ func ResolveOpenSearchTemplate(osdURL string) (string, error) {
 	// simplified request: use client.Get since no headers are needed
 	resp, err := client.Get(osdURL)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to fetch OpenSearch description from %q: %w", osdURL, err)
 	}
 	defer resp.Body.Close()
 
@@ -53,7 +53,7 @@ func parseOpenSearchTemplate(r io.Reader) (string, error) {
 	var d OpenSearchDescription
 	decoder := xml.NewDecoder(r)
 	if err := decoder.Decode(&d); err != nil && err != io.EOF {
-		return "", err
+		return "", fmt.Errorf("failed to parse OpenSearch description: %w", err)
 	}
 
 	// First pass: look for the OPDS profile type

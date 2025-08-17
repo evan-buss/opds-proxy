@@ -1,0 +1,8 @@
+# TODO
+
+- Release
+- Calibre converter
+- Do we buffer the entire book in memory? A PDF was just very slow and then instantly downloaded.
+- Integrate Kepubify library rather than CLI?
+- "Lightweight" docker images
+  - "kobo edition" would only include kepubify

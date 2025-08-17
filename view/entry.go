@@ -1,6 +1,7 @@
-package html
+package view
 
 import (
+	"fmt"
 	"html"
 	"html/template"
 	"regexp"
@@ -67,9 +68,12 @@ type EntryLinkViewModel struct {
 	Subtext  string
 }
 
-func constructEntryVM(params EntryParams) EntryViewModel {
+func constructEntryVM(params EntryParams) (EntryViewModel, error) {
 	// Extract navigation data using shared function from feed.go
-	navData := extractNavigationData(params.Feed, params.URL)
+	navData, err := extractNavigationData(params.Feed, params.URL)
+	if err != nil {
+		return EntryViewModel{}, fmt.Errorf("failed to extract navigation data: %w", err)
+	}
 
 	vm := EntryViewModel{
 		Title:           params.Entry.Title,
@@ -88,16 +92,24 @@ func constructEntryVM(params EntryParams) EntryViewModel {
 		if imageLink.IsDataImage() {
 			vm.ImageData = template.URL(imageLink.Href)
 		} else {
-			vm.ImageURL = resolveHref(params.URL, imageLink.Href)
+			imageURL, err := resolveHref(params.URL, imageLink.Href)
+			if err != nil {
+				return EntryViewModel{}, fmt.Errorf("failed to resolve image link: %w", err)
+			}
+			vm.ImageURL = imageURL
 		}
 	}
 
 	links := params.Entry.GetLinks()
 
 	for _, link := range links.Navigation() {
+		href, err := resolveHref(params.URL, link.Href)
+		if err != nil {
+			return EntryViewModel{}, fmt.Errorf("failed to resolve navigation link: %w", err)
+		}
 		vm.NavigationLinks = append(vm.NavigationLinks, EntryLinkViewModel{
 			Title:    link.Title,
-			Href:     resolveHref(params.URL, link.Href),
+			Href:     href,
 			TypeLink: link.TypeLink,
 		})
 	}
@@ -117,9 +129,13 @@ func constructEntryVM(params EntryParams) EntryViewModel {
 
 		format, exists := formats.FormatByMimeType(link.TypeLink)
 		if !exists {
+			href, err := resolveHref(params.URL, link.Href)
+			if err != nil {
+				return EntryViewModel{}, fmt.Errorf("failed to resolve download link: %w", err)
+			}
 			vm.DownloadLinks = append(vm.DownloadLinks, EntryLinkViewModel{
 				Title:    title,
-				Href:     resolveHref(params.URL, link.Href),
+				Href:     href,
 				TypeLink: link.TypeLink,
 			})
 			continue
@@ -131,13 +147,17 @@ func constructEntryVM(params EntryParams) EntryViewModel {
 			subtext += "Automatically converted to " + params.DeviceType.GetPreferredFormat().Label + ". "
 		}
 
+		href, err := resolveHref(params.URL, link.Href)
+		if err != nil {
+			return EntryViewModel{}, fmt.Errorf("failed to resolve download link: %w", err)
+		}
 		vm.DownloadLinks = append(vm.DownloadLinks, EntryLinkViewModel{
 			Title:    title,
-			Href:     resolveHref(params.URL, link.Href),
+			Href:     href,
 			TypeLink: link.TypeLink,
 			Subtext:  subtext,
 		})
 	}
 
-	return vm
+	return vm, nil
 }

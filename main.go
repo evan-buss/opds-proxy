@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -50,6 +50,7 @@ type FeedConfigAuth struct {
 
 func main() {
 	var k = koanf.New(".")
+	updateDefaultLogger(false) // Don't know if debug mode is enabled so using false
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	fs.StringP("port", "p", "8080", "port to listen on")
@@ -62,7 +63,8 @@ func main() {
 		os.Exit(0)
 	}
 	if err := fs.Parse(os.Args[1:]); err != nil {
-		log.Fatalf("error parsing flags: %v", err)
+		slog.Error("error parsing flags", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if showVersion, _ := fs.GetBool("version"); showVersion {
@@ -81,24 +83,31 @@ func main() {
 	// YAML Config
 	configPath, _ := fs.GetString("config")
 	if err := k.Load(file.Provider(configPath), yaml.Parser()); err != nil && !os.IsNotExist(err) {
-		log.Fatalf("error loading config file: %v", err)
+		slog.Error("error loading config file", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	// Environment Variables Config
 	if err := k.Load(envextended.ProviderWithValue("OPDS", ".", envCallback), json.Parser()); err != nil {
-		log.Fatalf("error loading environment variables: %v", err)
+		slog.Error("error loading environment variables", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	// CLI Flags Config
 	if err := k.Load(posflag.Provider(fs, ".", k), nil); err != nil {
-		log.Fatalf("error loading CLI flags: %v", err)
+		slog.Error("error loading CLI flags", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	config := ProxyConfig{}
 	k.Unmarshal("", &config)
 
+	if config.DebugMode {
+		updateDefaultLogger(true)
+	}
+
 	if config.Auth.HashKey == "" || config.Auth.BlockKey == "" {
-		log.Println("Generating new cookie signing credentials")
+		slog.Info("Generating new cookie signing credentials")
 		hashKey, blockKey := displayKeys()
 
 		config.Auth.HashKey = hashKey
@@ -106,27 +115,44 @@ func main() {
 	}
 
 	if err := config.Validate(); err != nil {
-		log.Fatalf("invalid configuration: %v", err)
+		slog.Error("invalid configuration", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	server, err := NewServer(&config)
 	if err != nil {
-		log.Fatalf("error creating server: %v", err)
+		slog.Error("error creating server", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if err = server.Serve(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("error serving: %v", err)
+		slog.Error("error serving", slog.Any("error", err))
+		os.Exit(1)
 	}
+}
+
+func updateDefaultLogger(showDebug bool) {
+	logLevel := slog.LevelInfo
+	addSource := false
+
+	if showDebug {
+		logLevel = slog.LevelDebug
+		addSource = true
+	}
+
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel, AddSource: addSource})))
 }
 
 func displayKeys() (string, string) {
 	hashKey := hex.EncodeToString(securecookie.GenerateRandomKey(32))
 	blockKey := hex.EncodeToString(securecookie.GenerateRandomKey(32))
 
-	log.Println("Set these values in your config file to persist authentication between server restarts.")
-	fmt.Println("auth:")
-	fmt.Printf("  hash_key: %s\n", hashKey)
-	fmt.Printf("  block_key: %s\n", blockKey)
+	slog.Info("Set these values in the auth section of your config file to persist authentication between server restarts",
+		slog.Group("auth",
+			slog.String("hash_key", hashKey),
+			slog.String("block_key", blockKey),
+		),
+	)
 
 	return hashKey, blockKey
 }

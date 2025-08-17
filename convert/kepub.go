@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"fmt"
 	"log/slog"
 	"os/exec"
 	"strings"
@@ -36,7 +37,7 @@ func (kc *KepubConverter) Convert(_ *slog.Logger, input string) (string, error) 
 
 	cmd := exec.Command("kepubify", "-v", "-u", "-o", kepubFile, input)
 	if err := cmd.Run(); err != nil {
-		return "", err
+		return "", fmt.Errorf("kepubify conversion failed for %q: %w", input, err)
 	}
 
 	return kepubFile, nil
