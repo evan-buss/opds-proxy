@@ -12,7 +12,7 @@ require (
 
 require (
 	github.com/gorilla/securecookie v1.1.2
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/pflag v1.0.9
 	golang.org/x/text v0.28.0
 )
 
