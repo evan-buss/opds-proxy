@@ -7,13 +7,13 @@ toolchain go1.24.2
 require (
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/file v1.2.0
-	github.com/knadh/koanf/v2 v2.2.2
+	github.com/knadh/koanf/v2 v2.3.0
 )
 
 require (
 	github.com/gorilla/securecookie v1.1.2
 	github.com/spf13/pflag v1.0.10
-	golang.org/x/text v0.28.0
+	golang.org/x/text v0.30.0
 )
 
 require (
@@ -34,6 +34,6 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/tidwall/sjson v1.2.5
-	golang.org/x/sync v0.16.0
+	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.35.0 // indirect
 )
