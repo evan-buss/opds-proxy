@@ -17,7 +17,6 @@ const (
 
 // DetectDevice determines the device type based on the user agent string
 func DetectDevice(userAgent string) DeviceType {
-	return DeviceKobo
 	if strings.Contains(userAgent, "Kobo") {
 		return DeviceKobo
 	}
