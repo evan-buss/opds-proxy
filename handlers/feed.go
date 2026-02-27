@@ -48,6 +48,7 @@ func Feed(outputDir string, feeds []auth.FeedConfig, s *securecookie.SecureCooki
 
 func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	queryURL := r.URL.Query().Get("q")
+	downloadType := r.URL.Query().Get("t")
 	if queryURL == "" {
 		http.Error(w, "No feed specified", http.StatusBadRequest)
 		return
@@ -77,6 +78,10 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mimeType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if mimeType == "application/octet-stream" && downloadType != "" {
+		mimeType, _, err = mime.ParseMediaType(downloadType)
+	}
+
 	if err != nil {
 		contentType := resp.Header.Get("Content-Type")
 		http.Error(w, fmt.Sprintf("Failed to parse content type %q: %v", contentType, err), http.StatusBadGateway)
