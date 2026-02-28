@@ -19,15 +19,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Set Docker Platforms For Branch
-        id: set-platforms
-        run: |
-          if [[ ${{ startsWith(github.ref, 'refs/tags/v')  }} == 'true' ]]; then
-              echo "DOCKER_PLATFORMS=linux/amd64,linux/arm64,linux/arm" >> "$GITHUB_OUTPUT"
-          else
-              echo "DOCKER_PLATFORMS=linux/amd64" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
@@ -68,7 +59,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ steps.set-platforms.outputs.DOCKER_PLATFORMS}}
+          platforms: linux/amd64,linux/arm64,linux/arm
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |

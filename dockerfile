@@ -2,8 +2,8 @@ FROM golang:1.24 AS base
 
 # Set by buildx
 ARG TARGETPLATFORM
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
+ARG TARGETOS
+ARG TARGETARCH
 ARG TARGETVARIANT
 
 # Download and install kepubify
