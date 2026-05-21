@@ -41,7 +41,7 @@ type Links []Link
 
 // IsDownload checks if the link is an acquisition/download link
 func (l Link) IsDownload() bool {
-	return l.Rel == AcquisitionFeedRel
+	return strings.HasPrefix(l.Rel, AcquisitionFeedRel)
 }
 
 // IsImage checks if the link is an image with optional category filtering

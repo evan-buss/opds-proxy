@@ -68,7 +68,8 @@ type FeedAuth struct {
 }
 
 type FeedConfig struct {
-	Name string
-	Url  string
-	Auth *FeedAuth
+	Name      string
+	Url       string
+	UserAgent string
+	Auth      *FeedAuth
 }

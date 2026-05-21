@@ -48,7 +48,7 @@ func TestEntryUnmarshal(t *testing.T) {
 	Formats: AZW3,EPUB<br/>
 	<div><p>A timeless romance following Elizabeth Bennet, a strong-willed young woman, and Mr. Darcy, a proud and wealthy gentleman. Set in Georgian England, the novel explores themes of love, marriage, social class, and personal growth through wit and humor.</p><p>When Elizabeth first meets Mr. Darcy at a ball, she finds him arrogant and disagreeable. Meanwhile, she is charmed by the dashing Mr. Wickham, who tells her tales of Darcy's alleged misconduct. As the story unfolds, Elizabeth discovers that first impressions can be deceiving, and that pride and prejudice can blind us to true character.</p><p>Through a series of misunderstandings, revelations, and personal growth, both Elizabeth and Darcy must overcome their initial judgments to find true love. This beloved classic remains one of the most popular novels in English literature.</p></div></div>
 		</content>
-		<link type="application/x-mobi8-ebook" href="/get/azw3/313/books" rel="http://opds-spec.org/acquisition" length="825549" mtime="2021-04-08T00:38:35+00:00"/>
+		<link type="application/x-mobi8-ebook" href="/get/azw3/313/books" rel="http://opds-spec.org/acquisition/open-access" length="825549" mtime="2021-04-08T00:38:35+00:00"/>
 		<link type="application/epub+zip" href="/get/epub/313/books" rel="http://opds-spec.org/acquisition" length="642930" mtime="2021-04-08T00:38:23+00:00"/>
 		<link type="image/jpeg" href="/get/cover/313/books" rel="http://opds-spec.org/cover"/>
 		<link type="image/jpeg" href="/get/thumb/313/books" rel="http://opds-spec.org/thumbnail"/>

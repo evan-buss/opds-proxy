@@ -75,6 +75,8 @@ func FormatByMimeType(mimeType string) (Format, bool) {
 		// Legacy/alternative MIME types
 		"application/mobi":       MOBI,
 		"application/x-epub+zip": EPUB,
+		"application/xml":        ATOM,
+		"text/xml":               ATOM,
 	}
 	
 	format, exists := formats[mimeType]

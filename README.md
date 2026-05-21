@@ -39,6 +39,7 @@ services:
     #   - OPDS__PORT=5228
     #   - OPDS__FEEDS__0__NAME=Some Feed
     #   - OPDS__FEEDS__0__URL=http://some-feed.com/opds
+    #   - OPDS__FEEDS__0__USER_AGENT=OPDS-Proxy/1.0
     #   - OPDS__FEEDS__0__AUTH__USERNAME=user
     #   - OPDS__FEEDS__0__AUTH__PASSWORD=password
     #   - OPDS__FEEDS__0__AUTH__LOCAL_ONLY=true
@@ -84,6 +85,10 @@ auth:
 feeds:
   - name: Some Feed
     url: http://some-feed.com/opds
+    # (Optional) Feed Custom User Agent
+    # If present, requests to this feed will use this custom User-Agent.
+    # This is useful for feeds that require a specific User-Agent to function.
+    user_agent: OPDS-Proxy/1.0
     # (Optional) Feed Authentication Credentials
     # If present, users will not be prompted for credentials in the web interface.
     # The server will take care of sending these with requests to the feed URL.

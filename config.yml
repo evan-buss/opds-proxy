@@ -2,5 +2,6 @@ debug: true
 feeds:
   - name: "Project Gutenberg"
     url: "https://www.gutenberg.org/ebooks/search.opds/"
+    user_agent: "OPDS-Proxy/1.0"
   - name: "Anarchist Library"
     url: "https://theanarchistlibrary.org/opds"

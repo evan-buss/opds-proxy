@@ -60,10 +60,25 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var customUserAgent string
+	if parsedReqURL, err := url.Parse(resolvedURL); err == nil {
+		for _, feed := range h.feeds {
+			if parsedFeedURL, err := url.Parse(feed.Url); err == nil {
+				if parsedFeedURL.Hostname() == parsedReqURL.Hostname() && feed.UserAgent != "" {
+					customUserAgent = feed.UserAgent
+					break
+				}
+			}
+		}
+	}
+
 	creds := auth.GetCredentials(resolvedURL, r, h.feeds, h.s)
 	resp, err := httpx.Fetch(resolvedURL, 10, func(req *http.Request) {
 		if creds != nil {
 			req.SetBasicAuth(creds.Username, creds.Password)
+		}
+		if customUserAgent != "" {
+			req.Header.Set("User-Agent", customUserAgent)
 		}
 	})
 	if err != nil {
@@ -126,14 +141,19 @@ func (h *FeedHandler) resolveQueryURL(queryURL, searchTerm string) (string, erro
 		return repl.Replace(queryURL), nil
 	}
 
-	if tmpl, err := opds.ResolveOpenSearchTemplate(queryURL); err == nil && tmpl != "" {
-		return repl.Replace(tmpl), nil
+	// Fall back to appending the search parameter for non-OpenSearch servers
+	u, err := url.Parse(queryURL)
+	if err == nil {
+		q := u.Query()
+		q.Set("query", searchTerm)
+		u.RawQuery = q.Encode()
+		return u.String(), nil
 	}
 
 	return queryURL, nil
 }
 
-func (h *FeedHandler) serveAtom(w http.ResponseWriter, r *http.Request, resp *http.Response, url string, deviceType device.DeviceType) error {
+func (h *FeedHandler) serveAtom(w http.ResponseWriter, r *http.Request, resp *http.Response, feedUrl string, deviceType device.DeviceType) error {
 	// Read the body so we can fall back to forwarding it on parse/render errors
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -148,6 +168,50 @@ func (h *FeedHandler) serveAtom(w http.ResponseWriter, r *http.Request, resp *ht
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 		httpx.ForwardResponse(w, resp)
 		return nil
+	}
+
+	// Intercept OpenSearch descriptor links and resolve them to URL templates
+	for i, link := range feed.Links {
+		if link.Rel == "search" && link.TypeLink == "application/opensearchdescription+xml" {
+			base, err := url.Parse(feedUrl)
+			if err == nil {
+				if rel, err := url.Parse(link.Href); err == nil {
+					osdURL := base.ResolveReference(rel).String()
+
+					var customUserAgent string
+					if parsedReqURL, err := url.Parse(osdURL); err == nil {
+						for _, feedCfg := range h.feeds {
+							if parsedFeedURL, err := url.Parse(feedCfg.Url); err == nil {
+								if parsedFeedURL.Hostname() == parsedReqURL.Hostname() && feedCfg.UserAgent != "" {
+									customUserAgent = feedCfg.UserAgent
+									break
+								}
+							}
+						}
+					}
+
+					creds := auth.GetCredentials(osdURL, r, h.feeds, h.s)
+					osdResp, err := httpx.Fetch(osdURL, 10, func(req *http.Request) {
+						if creds != nil {
+							req.SetBasicAuth(creds.Username, creds.Password)
+						}
+						if customUserAgent != "" {
+							req.Header.Set("User-Agent", customUserAgent)
+						}
+					})
+
+					if err == nil && osdResp.StatusCode >= 200 && osdResp.StatusCode < 300 {
+						if tmpl, err := opds.ParseOpenSearchTemplate(osdResp.Body); err == nil && tmpl != "" {
+							feed.Links[i].Href = tmpl
+							feed.Links[i].TypeLink = "application/atom+xml"
+						}
+						osdResp.Body.Close()
+					} else if err == nil {
+						osdResp.Body.Close()
+					}
+				}
+			}
+		}
 	}
 
 	entryID := r.URL.Query().Get("id")
@@ -165,7 +229,7 @@ func (h *FeedHandler) serveAtom(w http.ResponseWriter, r *http.Request, resp *ht
 		}
 
 		params := view.EntryParams{
-			URL:              url,
+			URL:              feedUrl,
 			Feed:             feed,
 			Entry:            entry,
 			DeviceType:       deviceType,
@@ -176,7 +240,7 @@ func (h *FeedHandler) serveAtom(w http.ResponseWriter, r *http.Request, resp *ht
 		return nil
 	}
 
-	params := view.FeedParams{URL: url, Feed: feed}
+	params := view.FeedParams{URL: feedUrl, Feed: feed}
 	view.Render(w, func(buf io.Writer) error { return view.Feed(buf, params) })
 	return nil
 }
